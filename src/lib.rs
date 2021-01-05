@@ -228,7 +228,8 @@ mod tests {
             (vec![(0, 1789), (-1, 37), (-2, 47), (-3, 1889)], 1202161486)
         ];
         for (system, goal) in systems {
-            let mut equations = system.iter().copied().map(|(a, m)| ModNum::<i128>::new(a, m));
+            let mut equations = system.iter().copied()
+                .map(|(a, m)| ModNum::<i128>::new(a, m));
             assert_eq!(ModNum::chinese_remainder_system(&mut equations).unwrap().a(), goal);
         }
     }
