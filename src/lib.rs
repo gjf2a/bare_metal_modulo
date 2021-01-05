@@ -1,5 +1,13 @@
 #![cfg_attr(not(test), no_std)]
-
+//! ModNum is a highly ergonomic modular arithmetic struct intended for no_std use.
+//!
+//! ModNum objects represent a value modulo m. The value and modulo can be of any
+//! primitive integer type.  Arithmetic operators include +, -, *, and ==.
+//!
+//! It can solve systems of modular equations as long as the
+//! value and modulo are signed integers.
+//!
+//!
 use core::mem;
 use num::{Integer, Signed};
 use core::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Neg};
@@ -33,6 +41,13 @@ impl <N: Integer + Signed + Copy> ModNum<N> {
         let (g, u, v) = ModNum::egcd(self.modulo, other.modulo);
         let c = (self.num * other.modulo * v + other.num * self.modulo * u) / g;
         ModNum::new(c, self.modulo * other.modulo)
+    }
+
+    pub fn chinese_remainder_system<I:Iterator<Item=ModNum<N>>>(modnums: &mut I) -> Option<ModNum<N>> {
+        match modnums.next() {
+            None => None,
+            Some(start_num) => Some(modnums.fold(start_num, |a, b| a.chinese_remainder(b)))
+        }
     }
 
     pub fn egcd(a: N, b: N) -> (N,N,N) {
@@ -202,6 +217,20 @@ mod tests {
         let x = ModNum::new(2, 5);
         let y = ModNum::new(3, 7);
         assert_eq!(x.chinese_remainder(y), ModNum::new(17, 35));
+    }
+
+    #[test]
+    fn test_chinese_systems() {
+        let systems: Vec<(Vec<(i128,i128)>,i128)> = vec![
+            (vec![(0, 17), (-2, 13), (-3, 19)], 3417),
+            (vec![(0, 67), (-1, 7), (-2, 59), (-3, 61)], 754018),
+            (vec![(0, 67), (-2, 7), (-3, 59), (-4, 61)], 779210),
+            (vec![(0, 67), (-1, 7), (-3, 59), (-4, 61)], 1261476)
+        ];
+        for (system, goal) in systems {
+            let mut equations = system.iter().copied().map(|(a, m)| ModNum::new(a, m));
+            assert_eq!(ModNum::chinese_remainder_system(&mut equations).unwrap().a(), goal);
+        }
     }
 
     #[test]
