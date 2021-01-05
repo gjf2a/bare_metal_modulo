@@ -78,7 +78,7 @@ impl <N:Integer+Copy> Sub<N> for ModNum<N> {
     type Output = ModNum<N>;
 
     fn sub(self, rhs: N) -> Self::Output {
-        self + (self.modulo - (rhs.mod_floor(&self.modulo)))
+        self + (-ModNum::new(rhs, self.modulo)).a()
     }
 }
 
