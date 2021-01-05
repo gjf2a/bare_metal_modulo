@@ -220,7 +220,7 @@ mod tests {
     #[test]
     fn test_chinese_systems() {
         // Examples from 2020 Advent of Code, Day 13 Puzzle 2.
-        let systems: Vec<(Vec<(i128,i128)>,i128)> = vec![
+        let systems = vec![
             (vec![(0, 17), (-2, 13), (-3, 19)], 3417),
             (vec![(0, 67), (-1, 7), (-2, 59), (-3, 61)], 754018),
             (vec![(0, 67), (-2, 7), (-3, 59), (-4, 61)], 779210),
@@ -228,7 +228,7 @@ mod tests {
             (vec![(0, 1789), (-1, 37), (-2, 47), (-3, 1889)], 1202161486)
         ];
         for (system, goal) in systems {
-            let mut equations = system.iter().copied().map(|(a, m)| ModNum::new(a, m));
+            let mut equations = system.iter().copied().map(|(a, m)| ModNum::<i128>::new(a, m));
             assert_eq!(ModNum::chinese_remainder_system(&mut equations).unwrap().a(), goal);
         }
     }
