@@ -1,0 +1,4 @@
+/target
+Cargo.lock
+/.idea
+bare_metal_modulo.iml
