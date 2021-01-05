@@ -2,8 +2,7 @@
 
 use core::mem;
 use num::{Integer, Signed};
-use core::ops::{Add, AddAssign, Sub, SubAssign};
-use std::ops::{Mul, MulAssign};
+use core::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Neg};
 
 #[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd)]
 pub struct ModNum<N> {
@@ -60,6 +59,14 @@ impl <N:Integer+Copy> Add<N> for ModNum<N> {
 impl <N:Integer+Copy> AddAssign<N> for ModNum<N> {
     fn add_assign(&mut self, rhs: N) {
         *self = *self + rhs;
+    }
+}
+
+impl <N:Integer+Copy> Neg for ModNum<N> {
+    type Output = ModNum<N>;
+
+    fn neg(self) -> Self::Output {
+        ModNum::new(self.modulo - self.num, self.modulo)
     }
 }
 
@@ -142,7 +149,16 @@ mod tests {
     }
 
     #[test]
-    fn test_sub_u() {
+    fn test_negation() {
+        for n in 0..5 {
+            let m = ModNum::new(n, 5);
+            let n = -m;
+            assert_eq!(m + n.n(), 0);
+        }
+    }
+
+    #[test]
+    fn test_sub() {
         for (n, m, sub, target) in vec![(1, 5, 2, 4)] {
             assert_eq!(ModNum::new(n, m) - sub, ModNum::new(target, m));
         }
