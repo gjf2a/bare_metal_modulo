@@ -7,7 +7,6 @@ description = "ModNum is a highly ergonomic modular arithmetic struct intended f
 readme = "README.md"
 homepage = "https://github.com/gjf2a/bare_metal_modulo"
 repository = "https://github.com/gjf2a/bare_metal_modulo"
-license = "Unlicense"
 license-file = "UNLICENSE"
 keywords = ["modulo arithmetic", "modular arithmetic"]
 categories = ["no-std", "mathematics"]
