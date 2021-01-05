@@ -44,10 +44,8 @@ impl <N: Integer + Signed + Copy> ModNum<N> {
     }
 
     pub fn chinese_remainder_system<I:Iterator<Item=ModNum<N>>>(modnums: &mut I) -> Option<ModNum<N>> {
-        match modnums.next() {
-            None => None,
-            Some(start_num) => Some(modnums.fold(start_num, |a, b| a.chinese_remainder(b)))
-        }
+        modnums.next().map(|start_num|
+            modnums.fold(start_num, |a, b| a.chinese_remainder(b)))
     }
 
     pub fn egcd(a: N, b: N) -> (N,N,N) {
@@ -221,11 +219,13 @@ mod tests {
 
     #[test]
     fn test_chinese_systems() {
+        // Examples from 2020 Advent of Code, Day 13 Puzzle 2.
         let systems: Vec<(Vec<(i128,i128)>,i128)> = vec![
             (vec![(0, 17), (-2, 13), (-3, 19)], 3417),
             (vec![(0, 67), (-1, 7), (-2, 59), (-3, 61)], 754018),
             (vec![(0, 67), (-2, 7), (-3, 59), (-4, 61)], 779210),
-            (vec![(0, 67), (-1, 7), (-3, 59), (-4, 61)], 1261476)
+            (vec![(0, 67), (-1, 7), (-3, 59), (-4, 61)], 1261476),
+            (vec![(0, 1789), (-1, 37), (-2, 47), (-3, 1889)], 1202161486)
         ];
         for (system, goal) in systems {
             let mut equations = system.iter().copied().map(|(a, m)| ModNum::new(a, m));
