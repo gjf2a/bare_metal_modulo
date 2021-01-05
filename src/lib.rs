@@ -19,8 +19,31 @@ impl <N: Integer+Copy> ModNum<N> {
         self.num
     }
 
+    pub fn chinese_remainder(&self, other: ModNum<N>) -> ModNum<N> {
+        let (g, u, v) = ModNum::egcd(self.modulo, other.modulo);
+        let remainder = self.modulo * other.modulo;
+        let c = ((self.num * other.modulo * v + other.num * self.modulo * u) / g).mod_floor(&remainder);
+        ModNum::new(c, remainder)
+    }
+
     pub fn iter(&self) -> ModNumIterator<N> {
         ModNumIterator::new(*self)
+    }
+
+    pub fn egcd(a: N, b: N) -> (N,N,N) {
+        if b == N::zero() {
+            if a < N::zero() {(N::zero() - a, N::zero() - N::one(), N::zero())} else {(a, N::one(), N::zero())}
+        } else {
+            let (g, x, y) = ModNum::egcd(b, a.mod_floor(&b));
+            (g, y, x - (a / b) * y)
+        }
+    }
+}
+
+// Congruence
+impl <N:Integer+Copy> PartialEq<N> for ModNum<N> {
+    fn eq(&self, other: &N) -> bool {
+        self.num == other.mod_floor(&self.modulo)
     }
 }
 
@@ -128,5 +151,27 @@ mod tests {
         assert_eq!(m, ModNum::new(1, 5));
         m -= 3;
         assert_eq!(m, ModNum::new(3, 5));
+    }
+
+    #[test]
+    fn test_chinese_remainder() {
+        let x = ModNum::new(2, 5);
+        let y = ModNum::new(3, 7);
+        assert_eq!(x.chinese_remainder(y), ModNum::new(17, 35));
+    }
+
+    #[test]
+    fn test_congruence() {
+        let m = ModNum::new(2, 5);
+        for c in (-13..13).step_by(5) {
+            assert_eq!(m, c);
+            for i in -2..=2 {
+                if i == 0 {
+                    assert_eq!(m, c);
+                } else {
+                    assert_ne!(m, c + i);
+                }
+            }
+        }
     }
 }
