@@ -22,7 +22,6 @@ impl <N: Integer+Copy> ModNum<N> {
     pub fn modulo(&self) -> N {
         self.modulo
     }
-}
 
     pub fn iter(&self) -> ModNumIterator<N> {
         ModNumIterator::new(*self)
