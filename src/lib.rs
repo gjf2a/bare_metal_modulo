@@ -15,11 +15,11 @@ impl <N: Integer+Copy> ModNum<N> {
         ModNum { num: num.mod_floor(&modulo), modulo }
     }
 
-    pub fn n(&self) -> N {
+    pub fn a(&self) -> N {
         self.num
     }
 
-    pub fn modulo(&self) -> N {
+    pub fn m(&self) -> N {
         self.modulo
     }
 
@@ -157,7 +157,7 @@ mod tests {
         for n in 0..5 {
             let m = ModNum::new(n, 5);
             let n = -m;
-            assert_eq!(m + n.n(), 0);
+            assert_eq!(m + n.a(), 0);
         }
     }
 
@@ -170,12 +170,12 @@ mod tests {
 
     #[test]
     fn test_iter_up() {
-        assert_eq!(vec![2, 3, 4, 0, 1], ModNum::new(2, 5).iter().map(|m: ModNum<usize>| m.n()).collect::<Vec<usize>>())
+        assert_eq!(vec![2, 3, 4, 0, 1], ModNum::new(2, 5).iter().map(|m: ModNum<usize>| m.a()).collect::<Vec<usize>>())
     }
 
     #[test]
     fn test_iter_down() {
-        assert_eq!(vec![1, 0, 4, 3, 2], ModNum::new(2, 5).iter().rev().map(|m: ModNum<usize>| m.n()).collect::<Vec<usize>>())
+        assert_eq!(vec![1, 0, 4, 3, 2], ModNum::new(2, 5).iter().rev().map(|m: ModNum<usize>| m.a()).collect::<Vec<usize>>())
     }
 
     #[test]
