@@ -106,18 +106,19 @@
 //!
 //! The solver works directly with an iterator containing the ModNum objects corresponding to the
 //! modular equations to be solved, facilitating space-efficient solutions of a sequence coming
-//! from a stream.
+//! from a stream. The examples below show two variants of the same system. The first example uses
+//! an iterator, and the second example retrieves the system from a Vec.
 //!
 //! ```
 //! use bare_metal_modulo::ModNum;
-//! let solution = ModNum::chinese_remainder_system(&mut (2..=4)
-//!     .zip((5..=9).step_by(2))
-//!     .map(|(a, m)| ModNum::new(a, m)))
-//!     .unwrap();
+//! let a_values = (2..=4);
+//! let m_values = (5..).step_by(2);
+//! let mut values = a_values.zip(m_values).map(|(a, m)| ModNum::new(a, m));
+//! let solution = ModNum::<i128>::chinese_remainder_system(&mut values).unwrap();
 //! assert_eq!(solution, 157);
 //!
-//! let values: Vec<ModNum<isize>> = vec![ModNum::new(2, 5), ModNum::new(3, 7), ModNum::new(4, 9)];
-//! let solution = ModNum::chinese_remainder_system(&mut values.iter().copied()).unwrap();
+//! let values = vec![ModNum::new(2, 5), ModNum::new(3, 7), ModNum::new(4, 9)];
+//! let solution = ModNum::<i128>::chinese_remainder_system(&mut values.iter().copied()).unwrap();
 //! assert_eq!(solution, 157);
 //! ```
 use core::mem;
