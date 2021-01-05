@@ -3,7 +3,14 @@ name = "bare_metal_modulo"
 version = "0.1.0"
 authors = ["gjf2a <ferrer@hendrix.edu>"]
 edition = "2018"
-
+description = "ModNum is a highly ergonomic modular arithmetic struct intended for no_std use"
+readme = "README.md"
+homepage = "https://github.com/gjf2a/bare_metal_modulo"
+repository = "https://github.com/gjf2a/bare_metal_modulo"
+license = "Unlicense"
+license-file = "UNLICENSE"
+keywords = ["modulo arithmetic", "modular arithmetic"]
+categories = ["no-std", "mathematics"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
