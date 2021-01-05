@@ -1,7 +1,7 @@
 #![cfg_attr(not(test), no_std)]
 
 use core::mem;
-use num::Integer;
+use num::{Integer, Signed};
 use core::ops::{Add, AddAssign, Sub, SubAssign};
 
 #[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd)]
@@ -12,27 +12,28 @@ pub struct ModNum<N> {
 
 impl <N: Integer+Copy> ModNum<N> {
     pub fn new(num: N, modulo: N) -> Self {
-        ModNum {num: num.mod_floor(&modulo), modulo}
+        ModNum { num: num.mod_floor(&modulo), modulo }
     }
 
     pub fn n(&self) -> N {
         self.num
     }
 
-    pub fn chinese_remainder(&self, other: ModNum<N>) -> ModNum<N> {
-        let (g, u, v) = ModNum::egcd(self.modulo, other.modulo);
-        let remainder = self.modulo * other.modulo;
-        let c = ((self.num * other.modulo * v + other.num * self.modulo * u) / g).mod_floor(&remainder);
-        ModNum::new(c, remainder)
-    }
-
     pub fn iter(&self) -> ModNumIterator<N> {
         ModNumIterator::new(*self)
+    }
+}
+
+impl <N: Integer + Signed + Copy> ModNum<N> {
+    pub fn chinese_remainder(&self, other: ModNum<N>) -> ModNum<N> {
+        let (g, u, v) = ModNum::egcd(self.modulo, other.modulo);
+        let c = (self.num * other.modulo * v + other.num * self.modulo * u) / g;
+        ModNum::new(c, self.modulo * other.modulo)
     }
 
     pub fn egcd(a: N, b: N) -> (N,N,N) {
         if b == N::zero() {
-            if a < N::zero() {(N::zero() - a, N::zero() - N::one(), N::zero())} else {(a, N::one(), N::zero())}
+            (a.signum() * a, a.signum(), N::zero())
         } else {
             let (g, x, y) = ModNum::egcd(b, a.mod_floor(&b));
             (g, y, x - (a / b) * y)
