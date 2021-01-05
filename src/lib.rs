@@ -2,16 +2,129 @@
 //! ModNum is a highly ergonomic modular arithmetic struct intended for no_std use.
 //!
 //! ModNum objects represent a value modulo m. The value and modulo can be of any
-//! primitive integer type.  Arithmetic operators include +, -, *, and ==.
+//! primitive integer type.  Arithmetic operators include +, - (both unary and binary),
+//! *, and ==.
 //!
-//! It can solve systems of modular equations as long as the
-//! value and modulo are signed integers.
+//! ModNum was originally developed to facilitate bidirectional navigation through fixed-size
+//! arrays at arbitrary starting points. This is facilitated by a double-ended iterator that
+//! traverses the entire ring starting at any desired value.
 //!
+//! Note that ModNum is not designed to work with arbitrary-length integers, as it requires its
+//! integer type to implement the Copy trait.
 //!
+//! For the [2020 Advent of Code](https://adventofcode.com/2020)
+//! ([Day 13](https://adventofcode.com/2020/day/13) part 2),
+//! I extended ModNum to solve systems of modular equations, provided that each modular equation
+//! is represented using signed integers. My implementation is based on this
+//! [lucid](https://byorgey.wordpress.com/2020/02/15/competitive-programming-in-haskell-modular-arithmetic-part-1/)
+//! [explanation](https://byorgey.wordpress.com/2020/03/03/competitive-programming-in-haskell-modular-arithmetic-part-2/)
+//! by [Brent Yorgey](http://ozark.hendrix.edu/~yorgey/).
+//!
+//! # Arithmetic Examples
+//! Addition, subtraction, multiplication, and unary negation are all fully supported for both
+//! signed and unsigned integer types. Note that the right-hand side will be an integer of the
+//! corresponding type, rather than another ModNum. I have personally found this to be most
+//! convenient in practice.
+//!
+//! ```
+//! use bare_metal_modulo::ModNum;
+//! let mut m = ModNum::new(2, 5);
+//! m += 2;
+//! assert_eq!(m, ModNum::new(4, 5));
+//! m += 2;
+//! assert_eq!(m, ModNum::new(1, 5));
+//! m -= 3;
+//! assert_eq!(m, ModNum::new(3, 5));
+//! m *= 2;
+//! assert_eq!(m, ModNum::new(1, 5));
+//! m *= 2;
+//! assert_eq!(m, ModNum::new(2, 5));
+//! m *= 2;
+//! assert_eq!(m, ModNum::new(4, 5));
+//! m *= 2;
+//! assert_eq!(m, ModNum::new(3, 5));
+//! m = -m;
+//! assert_eq!(m, ModNum::new(2, 5));
+//! assert_eq!(m.a(), 2);
+//! assert_eq!(m.m(), 5);
+//! ```
+//!
+//! The **==** operator can be used to compare two ModNums or a ModNum and an
+//! integer of the corresponding type. In both cases, it represents congruence rather than
+//! strict equality.
+//!
+//! ```
+//! use bare_metal_modulo::ModNum;
+//! let m = ModNum::new(2, 5);
+//! assert!(m == 2);
+//! assert!(m == 7);
+//! assert!(m == -3);
+//! ```
+//!
+//! # Accessing Values
+//! Each ModNum represents an integer **a (mod m)**. To access these values, use the
+//! corresponding **a()** and **m()** methods. Note that **a()** will always return a fully
+//! reduced value, regardless of how it was initialized.
+//!
+//! ```
+//! use bare_metal_modulo::ModNum;
+//! let m = ModNum::new(7, 10);
+//! assert_eq!(m.a(), 7);
+//! assert_eq!(m.m(), 10);
+//!
+//! let n = ModNum::new(23, 17);
+//! assert_eq!(n.a(), 6);
+//! assert_eq!(n.m(), 17);
+//!
+//! let p = ModNum::new(-4, 3);
+//! assert_eq!(p.a(), 2);
+//! assert_eq!(p.m(), 3);
+//! ```
+//!
+//! # Iteration
+//! I originally created ModNum to facilitate cyclic iteration through a fixed-size array from an
+//! arbitrary starting point in a no_std environment. Its double-ended iterator facilitates
+//! both forward and backward iteration.
+//!
+//! ```
+//! use bare_metal_modulo::ModNum;
+//!
+//! let forward: Vec<usize> = ModNum::new(2, 5).iter().map(|mn| mn.a()).collect();
+//! assert_eq!(forward, vec![2, 3, 4, 0, 1]);
+//!
+//! let reverse: Vec<usize> = ModNum::new(2, 5).iter().rev().map(|mn| mn.a()).collect();
+//! assert_eq!(reverse, vec![1, 0, 4, 3, 2]);
+//! ```
+//!
+//! For the [2020 Advent of Code](https://adventofcode.com/2020)
+//! ([Day 13](https://adventofcode.com/2020/day/13) part 2),
+//! I extended ModNum to solve systems of modular equations, provided that each modular equation
+//! is represented using signed integers. My implementation is based on this
+//! [lucid](https://byorgey.wordpress.com/2020/02/15/competitive-programming-in-haskell-modular-arithmetic-part-1/)
+//! [explanation](https://byorgey.wordpress.com/2020/03/03/competitive-programming-in-haskell-modular-arithmetic-part-2/)
+//! by [Brent Yorgey](http://ozark.hendrix.edu/~yorgey/).
+//!
+//! The solver works directly with an iterator containing the ModNum objects corresponding to the
+//! modular equations to be solved, facilitating space-efficient solutions of a sequence coming
+//! from a stream.
+//!
+//! ```
+//! use bare_metal_modulo::ModNum;
+//! let solution = ModNum::chinese_remainder_system(&mut (2..=4)
+//!     .zip((5..=9).step_by(2))
+//!     .map(|(a, m)| ModNum::new(a, m)))
+//!     .unwrap();
+//! assert_eq!(solution, 157);
+//!
+//! let values: Vec<ModNum<isize>> = vec![ModNum::new(2, 5), ModNum::new(3, 7), ModNum::new(4, 9)];
+//! let solution = ModNum::chinese_remainder_system(&mut values.iter().copied()).unwrap();
+//! assert_eq!(solution, 157);
+//! ```
 use core::mem;
 use num::{Integer, Signed};
 use core::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Neg};
 
+/// Represents an integer **a (mod m)**
 #[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd)]
 pub struct ModNum<N> {
     num: N,
@@ -19,18 +132,22 @@ pub struct ModNum<N> {
 }
 
 impl <N: Integer+Copy> ModNum<N> {
-    pub fn new(num: N, modulo: N) -> Self {
-        ModNum { num: num.mod_floor(&modulo), modulo }
+    /// Creates a new integer **a (mod m)**
+    pub fn new(a: N, m: N) -> Self {
+        ModNum { num: a.mod_floor(&m), modulo: m }
     }
 
+    /// Returns the integer value **a** for **a (mod m)**
     pub fn a(&self) -> N {
         self.num
     }
 
+    /// Returns the modulo value **m** for **a (mod m)**
     pub fn m(&self) -> N {
         self.modulo
     }
 
+    /// Returns an iterator starting at **a (mod m)** and ending at **a - 1 (mod m)**
     pub fn iter(&self) -> ModNumIterator<N> {
         ModNumIterator::new(*self)
     }
@@ -221,6 +338,7 @@ mod tests {
     fn test_chinese_systems() {
         // Examples from 2020 Advent of Code, Day 13 Puzzle 2.
         let systems = vec![
+            (vec![(2, 5), (3, 7), (4, 9)], 157),
             (vec![(0, 17), (-2, 13), (-3, 19)], 3417),
             (vec![(0, 67), (-1, 7), (-2, 59), (-3, 61)], 754018),
             (vec![(0, 67), (-2, 7), (-3, 59), (-4, 61)], 779210),
