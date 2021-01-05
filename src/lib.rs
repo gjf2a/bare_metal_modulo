@@ -3,6 +3,7 @@
 use core::mem;
 use num::{Integer, Signed};
 use core::ops::{Add, AddAssign, Sub, SubAssign};
+use std::ops::{Mul, MulAssign};
 
 #[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd)]
 pub struct ModNum<N> {
@@ -52,7 +53,7 @@ impl <N:Integer+Copy> Add<N> for ModNum<N> {
     type Output = ModNum<N>;
 
     fn add(self, rhs: N) -> Self::Output {
-        ModNum {num: (self.num + rhs).mod_floor(&self.modulo), modulo: self.modulo}
+        ModNum::new(self.num + rhs, self.modulo)
     }
 }
 
@@ -73,6 +74,20 @@ impl <N:Integer+Copy> Sub<N> for ModNum<N> {
 impl <N:Integer+Copy> SubAssign<N> for ModNum<N> {
     fn sub_assign(&mut self, rhs: N) {
         *self = *self - rhs;
+    }
+}
+
+impl <N:Integer+Copy> Mul<N> for ModNum<N> {
+    type Output = ModNum<N>;
+
+    fn mul(self, rhs: N) -> Self::Output {
+        ModNum::new(self.num * rhs, self.modulo)
+    }
+}
+
+impl <N:Integer+Copy> MulAssign<N> for ModNum<N> {
+    fn mul_assign(&mut self, rhs: N) {
+        *self = *self * rhs;
     }
 }
 
@@ -151,6 +166,14 @@ mod tests {
         m += 2;
         assert_eq!(m, ModNum::new(1, 5));
         m -= 3;
+        assert_eq!(m, ModNum::new(3, 5));
+        m *= 2;
+        assert_eq!(m, ModNum::new(1, 5));
+        m *= 2;
+        assert_eq!(m, ModNum::new(2, 5));
+        m *= 2;
+        assert_eq!(m, ModNum::new(4, 5));
+        m *= 2;
         assert_eq!(m, ModNum::new(3, 5));
     }
 
