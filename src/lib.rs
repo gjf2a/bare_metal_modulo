@@ -81,8 +81,6 @@
 //! assert_eq!(m, ModNum::new(3, 5));
 //! m = -m;
 //! assert_eq!(m, ModNum::new(2, 5));
-//! assert_eq!(m.a(), 2);
-//! assert_eq!(m.m(), 5);
 //!
 //! assert_eq!(m.pow(2), ModNum::new(4, 5));
 //! assert_eq!(m.pow(3), ModNum::new(3, 5));
@@ -203,7 +201,7 @@ impl <N: Integer + Signed + Copy> ModNum<N> {
     /// - self represents the modular equation **x = a (mod m)**
     /// - other represents the modular equation **x = b (mod n)**
     /// - It returns a ModNum corresponding to the equation **x = c (mod mn)** where
-    ///   **c** is congruent both to **a (mod m)** **b (mod n)**
+    ///   **c** is congruent both to **a (mod m)** and **b (mod n)**
     pub fn chinese_remainder(&self, other: ModNum<N>) -> ModNum<N> {
         let (g, u, v) = ModNum::egcd(self.modulo, other.modulo);
         let c = (self.num * other.modulo * v + other.num * self.modulo * u).div_floor(&g);
@@ -213,10 +211,10 @@ impl <N: Integer + Signed + Copy> ModNum<N> {
     /// Solves a system of modular equations using ModMum::chinese_remainder().
     ///
     /// Each equation in the system is an element of the **modnums** iterator parameter.
-    /// - Returns None if the iterator is empty.
-    /// - Returns Some(element) if the iterator has only one element.
-    /// - Returns Some(solution) if the iterator has two or more elements, where the solution is
-    ///   found by repeatedly calling ModNum::chinese_remainder().
+    /// - Returns **None** if the iterator is empty.
+    /// - Returns **Some(element)** if the iterator has only one element.
+    /// - Returns **Some(solution)** if the iterator has two or more elements, where the solution is
+    ///   found by repeatedly calling **ModNum::chinese_remainder()**.
     pub fn chinese_remainder_system<I:Iterator<Item=ModNum<N>>>(modnums: &mut I) -> Option<ModNum<N>> {
         modnums.next().map(|start_num|
             modnums.fold(start_num, |a, b| a.chinese_remainder(b)))
@@ -238,12 +236,12 @@ impl <N: Integer + Signed + Copy> ModNum<N> {
         }
     }
 
-    /// Returns the modular inverse, if it exists.
+    /// Returns the modular inverse, if it exists. Returns **None** if it does not exist.
     ///
     /// This is my translation into Rust of [Brent Yorgey's Haskell implementation](https://byorgey.wordpress.com/2020/02/15/competitive-programming-in-haskell-modular-arithmetic-part-1/).
     ///
-    /// **let m = ModNum::new(a, m)**, where **a** and **m** are relatively prime.
-    /// **m * m.inverse()** is congruent to 1 (mod m).
+    /// Let **m = ModNum::new(a, m)**, where **a** and **m** are relatively prime.
+    /// Then **m * m.inverse().unwrap().a()** is congruent to 1 (mod m).
     ///
     /// Returns None if **a** and **m** are not relatively prime.
     pub fn inverse(&self) -> Option<ModNum<N>> {
