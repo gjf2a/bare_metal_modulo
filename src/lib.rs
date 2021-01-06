@@ -1,6 +1,9 @@
 #![cfg_attr(not(test), no_std)]
 //! # Overview
-//! ModNum is a highly ergonomic modular arithmetic struct intended for no_std use.
+//! The bare_metal_modulo crate includes two structs:
+//! - ModNum is a highly ergonomic modular arithmetic struct intended for no_std use.
+//! - ModNumIterator is a double-ended iterator that starts with the ModNum upon which it is
+//!   invoked, making a complete traversal of the elements in that ModNum's ring.
 //!
 //! ModNum objects represent a value modulo m. The value and modulo can be of any
 //! primitive integer type.  Arithmetic operators include +, - (both unary and binary),
@@ -21,14 +24,44 @@
 //! [explanation](https://byorgey.wordpress.com/2020/03/03/competitive-programming-in-haskell-modular-arithmetic-part-2/)
 //! by [Brent Yorgey](http://ozark.hendrix.edu/~yorgey/).
 //!
-//! # Arithmetic Examples
-//! Addition, subtraction, multiplication, and unary negation are all fully supported for both
-//! signed and unsigned integer types. Note that the right-hand side will be an integer of the
-//! corresponding type, rather than another ModNum. I have personally found this to be most
-//! convenient in practice.
+//! # Accessing Values
+//! Each ModNum represents an integer **a (mod m)**. To access these values, use the
+//! corresponding **a()** and **m()** methods. Note that **a()** will always return a fully
+//! reduced value, regardless of how it was initialized.
 //!
 //! ```
 //! use bare_metal_modulo::ModNum;
+//!
+//! let m = ModNum::new(7, 10);
+//! assert_eq!(m.a(), 7);
+//! assert_eq!(m.m(), 10);
+//!
+//! let n = ModNum::new(23, 17);
+//! assert_eq!(n.a(), 6);
+//! assert_eq!(n.m(), 17);
+//!
+//! let p = ModNum::new(-4, 3);
+//! assert_eq!(p.a(), 2);
+//! assert_eq!(p.m(), 3);
+//! ```
+//!
+//! # Arithmetic
+//! Addition, subtraction, multiplication, and exponentiation are all fully supported for both
+//! signed and unsigned integer types. Note that the right-hand side will be an integer of the
+//! corresponding type, rather than another ModNum.
+//!
+//! I have personally found this to be most convenient in practice for three reasons:
+//! 1. As the second operand is not a ModNum, there is no need to check to ensure that their
+//!    modulo components match. The user ensures that the operand value makes sense in context.
+//! 2. In code I have written, I find that the operand value emerges from a context in which
+//!    ModNum structs are irrelevant.
+//! 3. If the desired operand is another ModNum, it is ergonomic to call **.a()** to obtain the operand.
+//!
+//! Unary negation is supported for both signed and unsigned integers. Multiplicative
+//! inverse (using the **inverse()** method) is supported for signed integers only.
+//! ```
+//! use bare_metal_modulo::ModNum;
+//! use num::traits::Pow;
 //!
 //! let mut m = ModNum::new(2, 5);
 //! m += 2;
@@ -49,6 +82,15 @@
 //! assert_eq!(m, ModNum::new(2, 5));
 //! assert_eq!(m.a(), 2);
 //! assert_eq!(m.m(), 5);
+//!
+//! assert_eq!(m.pow(2), ModNum::new(4, 5));
+//! assert_eq!(m.pow(3), ModNum::new(3, 5));
+//! assert_eq!(m.pow(4), ModNum::new(1, 5));
+//! assert_eq!(m.pow(5), ModNum::new(2, 5));
+//! assert_eq!(m.pow(6), ModNum::new(4, 5));
+//!
+//! let i = m.inverse().unwrap();
+//! assert_eq!(m * i.a(), 1);
 //! ```
 //!
 //! The **==** operator can be used to compare two ModNums or a ModNum and an
@@ -63,26 +105,6 @@
 //! assert!(m == 7);
 //! assert!(m == -3);
 //! assert!(m != 3);
-//! ```
-//!
-//! # Accessing Values
-//! Each ModNum represents an integer **a (mod m)**. To access these values, use the
-//! corresponding **a()** and **m()** methods. Note that **a()** will always return a fully
-//! reduced value, regardless of how it was initialized.
-//!
-//! ```
-//! use bare_metal_modulo::ModNum;
-//! let m = ModNum::new(7, 10);
-//! assert_eq!(m.a(), 7);
-//! assert_eq!(m.m(), 10);
-//!
-//! let n = ModNum::new(23, 17);
-//! assert_eq!(n.a(), 6);
-//! assert_eq!(n.m(), 17);
-//!
-//! let p = ModNum::new(-4, 3);
-//! assert_eq!(p.a(), 2);
-//! assert_eq!(p.m(), 3);
 //! ```
 //!
 //! # Iteration
@@ -123,24 +145,24 @@
 //! ```
 //! use bare_metal_modulo::ModNum;
 //!
-//! let a_values = (2..=4);
-//! let m_values = (5..).step_by(2);
-//! let mut values = a_values.zip(m_values).map(|(a, m)| ModNum::new(a, m));
-//! let solution = ModNum::<i128>::chinese_remainder_system(&mut values).unwrap().a();
-//! assert_eq!(solution, 157);
+//! let mut values = (2..).zip((5..).step_by(2)).map(|(a, m)| ModNum::new(a, m)).take(3);
+//! let solution = ModNum::<i128>::chinese_remainder_system(&mut values);
+//! assert_eq!(solution.unwrap().a(), 157);
 //!
 //! let values = vec![ModNum::new(2, 5), ModNum::new(3, 7), ModNum::new(4, 9)];
-//! let solution = ModNum::<i128>::chinese_remainder_system(&mut values.iter().copied()).unwrap().a();
-//! assert_eq!(solution, 157);
+//! let solution = ModNum::<i128>::chinese_remainder_system(&mut values.iter().copied());
+//! assert_eq!(solution.unwrap().a(), 157);
 //!
-//! let mut values = [(0, 23), (28, 41), (20, 37), (398, 421), (11, 17), (15, 19), (6, 29),
-//!                   (433, 487), (11, 13), (5, 137), (19, 49)].iter().copied().map(|(a, m)| ModNum::new(a, m));
-//! let solution = ModNum::<i128>::chinese_remainder_system(&mut values).unwrap().a();
-//! assert_eq!(solution, 762009420388013796);
+//!let mut values = [(0, 23), (28, 41), (20, 37), (398, 421), (11, 17), (15, 19), (6, 29),
+//!    (433, 487), (11, 13), (5, 137), (19, 49)]
+//!    .iter().copied().map(|(a, m)| ModNum::new(a, m));
+//! let solution = ModNum::<i128>::chinese_remainder_system(&mut values);
+//! assert_eq!(solution.unwrap().a(), 762009420388013796);
 //! ```
 use core::mem;
-use num::{Integer, Signed};
+use num::{Integer, Signed, NumCast};
 use core::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Neg};
+use num::traits::Pow;
 
 /// Represents an integer **a (mod m)**
 #[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd)]
@@ -173,13 +195,14 @@ impl <N: Integer+Copy> ModNum<N> {
 
 impl <N: Integer + Signed + Copy> ModNum<N> {
 
-    /// Solves a pair of modular equations using the [Chinese Remainder Theorem](https://byorgey.wordpress.com/2020/03/03/competitive-programming-in-haskell-modular-arithmetic-part-2/)
+    /// Solves a pair of modular equations using the [Chinese Remainder Theorem](https://byorgey.wordpress.com/2020/03/03/competitive-programming-in-haskell-modular-arithmetic-part-2/).
+    ///
     /// This is my translation into Rust of [Brent Yorgey's Haskell implementation](https://byorgey.wordpress.com/2020/03/03/competitive-programming-in-haskell-modular-arithmetic-part-2/).
     ///
-    /// - self represents the modular equation x = a (mod m)
-    /// - other represents the modular equation x = b (mod n)
-    /// - It returns a ModNum corresponding to the equation x = c (mod mn) where
-    ///   c $\equiv$ a (mod m) and c $\equiv$ b (mod n)
+    /// - self represents the modular equation **x = a (mod m)**
+    /// - other represents the modular equation **x = b (mod n)**
+    /// - It returns a ModNum corresponding to the equation **x = c (mod mn)** where
+    ///   **c** is congruent both to **a (mod m)** **b (mod n)**
     pub fn chinese_remainder(&self, other: ModNum<N>) -> ModNum<N> {
         let (g, u, v) = ModNum::egcd(self.modulo, other.modulo);
         let c = (self.num * other.modulo * v + other.num * self.modulo * u).div_floor(&g);
@@ -199,6 +222,7 @@ impl <N: Integer + Signed + Copy> ModNum<N> {
     }
 
     /// [Extended Euclidean Algorithm for Greatest Common Divisor](https://byorgey.wordpress.com/2020/02/15/competitive-programming-in-haskell-modular-arithmetic-part-1/) for GCD.
+    ///
     /// This is my translation into Rust of [Brent Yorgey's Haskell implementation](https://byorgey.wordpress.com/2020/02/15/competitive-programming-in-haskell-modular-arithmetic-part-1/).
     ///
     /// Given two integers **a** and **b**, it returns three integer values:
@@ -211,6 +235,19 @@ impl <N: Integer + Signed + Copy> ModNum<N> {
             let (g, x, y) = ModNum::egcd(b, a.mod_floor(&b));
             (g, y, x - (a / b) * y)
         }
+    }
+
+    /// Returns the modular inverse, if it exists.
+    ///
+    /// This is my translation into Rust of [Brent Yorgey's Haskell implementation](https://byorgey.wordpress.com/2020/02/15/competitive-programming-in-haskell-modular-arithmetic-part-1/).
+    ///
+    /// **let m = ModNum::new(a, m)**, where **a** and **m** are relatively prime.
+    /// **m * m.inverse()** is congruent to 1 (mod m).
+    ///
+    /// Returns None if **a** and **m** are not relatively prime.
+    pub fn inverse(&self) -> Option<ModNum<N>> {
+        let (g, _, inv) = ModNum::<N>::egcd(self.m(), self.a());
+        if g == N::one() {Some(ModNum::new(inv, self.m()))} else {None}
     }
 }
 
@@ -271,6 +308,25 @@ impl <N:Integer+Copy> MulAssign<N> for ModNum<N> {
     }
 }
 
+impl <N:Integer+Copy+NumCast> Pow<N> for ModNum<N> {
+    type Output = ModNum<N>;
+
+    fn pow(self, rhs: N) -> Self::Output {
+        if rhs == N::zero() {
+            ModNum::new(N::one(), self.m())
+        } else {
+            let r = self.pow(rhs.div_floor(&(N::from(2).unwrap())));
+            let mut sq = r * r.a();
+            if rhs.is_odd() {
+                sq *= self.a();
+            }
+            sq
+        }
+    }
+}
+
+/// A double-ended iterator that starts with the ModNum upon which it is invoked,
+/// making a complete traversal of the elements in that ModNum's ring.
 #[derive(Debug)]
 pub struct ModNumIterator<N> {
     next: ModNum<N>,
@@ -348,6 +404,20 @@ mod tests {
     }
 
     #[test]
+    fn test_inverse() {
+        for a in 0..13 {
+            let m = ModNum::new(a, 13);
+            let inv = m.inverse();
+            if a == 0 {
+                assert!(inv.is_none());
+            } else {
+                println!("m: {:?}, inv: {:?}", m, inv);
+                assert_eq!(m * inv.unwrap().a(), 1);
+            }
+        }
+    }
+
+    #[test]
     fn test_assign() {
         let mut m = ModNum::new(2, 5);
         m += 2;
@@ -407,10 +477,19 @@ mod tests {
     }
 
     #[test]
+    fn test_pow() {
+        let m = ModNum::new(2, 5);
+        for (exp, result) in (2..).zip([4, 3, 1, 2].iter().cycle()).take(20) {
+            assert_eq!(m.pow(exp).a(), *result);
+        }
+    }
+
+    #[test]
     fn test_big() {
-        let mut values = [(0, 23), (28, 41), (20, 37), (398, 421), (11, 17), (15, 19), (6, 29), (433, 487), (11, 13), (5, 137), (19, 49)].iter().copied().map(|(a, m)| ModNum::new(a, m));
+        let mut values = [(0, 23), (28, 41), (20, 37), (398, 421), (11, 17), (15, 19), (6, 29),
+            (433, 487), (11, 13), (5, 137), (19, 49)]
+            .iter().copied().map(|(a, m)| ModNum::new(a, m));
         let solution = ModNum::<i128>::chinese_remainder_system(&mut values).unwrap().a();
-        println!("solution: {:?}, max i64: {}", solution, i64::MAX);
         assert_eq!(solution, 762009420388013796);
     }
 }
