@@ -2,7 +2,8 @@ ModNum is a highly ergonomic modular arithmetic struct intended for no_std use.
 
 ModNum objects represent a value modulo m. The value and modulo can be of any
 primitive integer type.  Arithmetic operators include +, - (both unary and binary),
-*, and ==.
+*, pow(), and ==. Additional capabilities include computing multiplicative inverses 
+and solving modular equations.
 
 ModNum was originally developed to facilitate bidirectional navigation through fixed-size
 arrays at arbitrary starting points. This is facilitated by a double-ended iterator that
