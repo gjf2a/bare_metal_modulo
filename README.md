@@ -10,6 +10,3 @@ traverses the entire ring starting at any desired value.
 
 Note that ModNum is not designed to work with arbitrary-length integers, as it requires its
 integer type to implement the Copy trait.
-
-* [Documentation] (https://docs.rs/bare_metal_modulo/0.1.1/bare_metal_modulo/)
-* [crates.io] (https://crates.io/crates/bare_metal_modulo)
