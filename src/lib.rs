@@ -1,4 +1,5 @@
 #![cfg_attr(not(test), no_std)]
+//! # Overview
 //! ModNum is a highly ergonomic modular arithmetic struct intended for no_std use.
 //!
 //! ModNum objects represent a value modulo m. The value and modulo can be of any
@@ -28,6 +29,7 @@
 //!
 //! ```
 //! use bare_metal_modulo::ModNum;
+//!
 //! let mut m = ModNum::new(2, 5);
 //! m += 2;
 //! assert_eq!(m, ModNum::new(4, 5));
@@ -55,10 +57,12 @@
 //!
 //! ```
 //! use bare_metal_modulo::ModNum;
+//!
 //! let m = ModNum::new(2, 5);
 //! assert!(m == 2);
 //! assert!(m == 7);
 //! assert!(m == -3);
+//! assert!(m != 3);
 //! ```
 //!
 //! # Accessing Values
@@ -96,6 +100,7 @@
 //! assert_eq!(reverse, vec![1, 0, 4, 3, 2]);
 //! ```
 //!
+//! # Solving Modular Equations with the Chinese Remainder Theorem
 //! For the [2020 Advent of Code](https://adventofcode.com/2020)
 //! ([Day 13](https://adventofcode.com/2020/day/13) part 2),
 //! I extended ModNum to solve systems of modular equations, provided that each modular equation
@@ -109,17 +114,29 @@
 //! from a stream. The examples below show two variants of the same system. The first example uses
 //! an iterator, and the second example retrieves the system from a Vec.
 //!
+//! Note that the solution value can rapidly become large, as shown in the third example. I
+//! recommend using **i128**, so as to maximize the set of solvable equations given this library's
+//! constraint of using **Copy** integers only. While the solution to the third example is
+//! representable as an **i64**, some of the intermediate multiplications will overflow unless
+//! **i128** is used.
+//!
 //! ```
 //! use bare_metal_modulo::ModNum;
+//!
 //! let a_values = (2..=4);
 //! let m_values = (5..).step_by(2);
 //! let mut values = a_values.zip(m_values).map(|(a, m)| ModNum::new(a, m));
-//! let solution = ModNum::<i128>::chinese_remainder_system(&mut values).unwrap();
+//! let solution = ModNum::<i128>::chinese_remainder_system(&mut values).unwrap().a();
 //! assert_eq!(solution, 157);
 //!
 //! let values = vec![ModNum::new(2, 5), ModNum::new(3, 7), ModNum::new(4, 9)];
-//! let solution = ModNum::<i128>::chinese_remainder_system(&mut values.iter().copied()).unwrap();
+//! let solution = ModNum::<i128>::chinese_remainder_system(&mut values.iter().copied()).unwrap().a();
 //! assert_eq!(solution, 157);
+//!
+//! let mut values = [(0, 23), (28, 41), (20, 37), (398, 421), (11, 17), (15, 19), (6, 29),
+//!                   (433, 487), (11, 13), (5, 137), (19, 49)].iter().copied().map(|(a, m)| ModNum::new(a, m));
+//! let solution = ModNum::<i128>::chinese_remainder_system(&mut values).unwrap().a();
+//! assert_eq!(solution, 762009420388013796);
 //! ```
 use core::mem;
 use num::{Integer, Signed};
@@ -155,17 +172,38 @@ impl <N: Integer+Copy> ModNum<N> {
 }
 
 impl <N: Integer + Signed + Copy> ModNum<N> {
+
+    /// Solves a pair of modular equations using the [Chinese Remainder Theorem](https://byorgey.wordpress.com/2020/03/03/competitive-programming-in-haskell-modular-arithmetic-part-2/)
+    /// This is my translation into Rust of [Brent Yorgey's Haskell implementation](https://byorgey.wordpress.com/2020/03/03/competitive-programming-in-haskell-modular-arithmetic-part-2/).
+    ///
+    /// - self represents the modular equation x = a (mod m)
+    /// - other represents the modular equation x = b (mod n)
+    /// - It returns a ModNum corresponding to the equation x = c (mod mn) where
+    ///   c $\equiv$ a (mod m) and c $\equiv$ b (mod n)
     pub fn chinese_remainder(&self, other: ModNum<N>) -> ModNum<N> {
         let (g, u, v) = ModNum::egcd(self.modulo, other.modulo);
-        let c = (self.num * other.modulo * v + other.num * self.modulo * u) / g;
+        let c = (self.num * other.modulo * v + other.num * self.modulo * u).div_floor(&g);
         ModNum::new(c, self.modulo * other.modulo)
     }
 
+    /// Solves a system of modular equations using ModMum::chinese_remainder().
+    ///
+    /// Each equation in the system is an element of the **modnums** iterator parameter.
+    /// - Returns None if the iterator is empty.
+    /// - Returns Some(element) if the iterator has only one element.
+    /// - Returns Some(solution) if the iterator has two or more elements, where the solution is
+    ///   found by repeatedly calling ModNum::chinese_remainder().
     pub fn chinese_remainder_system<I:Iterator<Item=ModNum<N>>>(modnums: &mut I) -> Option<ModNum<N>> {
         modnums.next().map(|start_num|
             modnums.fold(start_num, |a, b| a.chinese_remainder(b)))
     }
 
+    /// [Extended Euclidean Algorithm for Greatest Common Divisor](https://byorgey.wordpress.com/2020/02/15/competitive-programming-in-haskell-modular-arithmetic-part-1/) for GCD.
+    /// This is my translation into Rust of [Brent Yorgey's Haskell implementation](https://byorgey.wordpress.com/2020/02/15/competitive-programming-in-haskell-modular-arithmetic-part-1/).
+    ///
+    /// Given two integers **a** and **b**, it returns three integer values:
+    /// - Greatest Common Divisor (**g**) of **a** and **b**
+    /// - Two additional values **x** and **y**, where **ax + by = g**
     pub fn egcd(a: N, b: N) -> (N,N,N) {
         if b == N::zero() {
             (a.signum() * a, a.signum(), N::zero())
@@ -176,7 +214,7 @@ impl <N: Integer + Signed + Copy> ModNum<N> {
     }
 }
 
-// Congruence
+/// Returns **true** if **other** is congruent to **self.a() (mod self.m())**
 impl <N:Integer+Copy> PartialEq<N> for ModNum<N> {
     fn eq(&self, other: &N) -> bool {
         self.num == other.mod_floor(&self.modulo)
@@ -366,5 +404,13 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn test_big() {
+        let mut values = [(0, 23), (28, 41), (20, 37), (398, 421), (11, 17), (15, 19), (6, 29), (433, 487), (11, 13), (5, 137), (19, 49)].iter().copied().map(|(a, m)| ModNum::new(a, m));
+        let solution = ModNum::<i128>::chinese_remainder_system(&mut values).unwrap().a();
+        println!("solution: {:?}, max i64: {}", solution, i64::MAX);
+        assert_eq!(solution, 762009420388013796);
     }
 }
