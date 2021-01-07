@@ -82,17 +82,17 @@
 //! assert_eq!(m, ModNum::new(2, 5));
 //!
 //! ```
-//! Multiplicative inverse (using the **inverse()** method) is supported for signed integers only.
-//! As inverses are only defined when **a** and **m** are relatively prime, **inverse()** will return
+//! Multiplicative inverse (using the **.inverse()** method) is supported for signed integers only.
+//! As inverses are only defined when **a** and **m** are relatively prime, **.inverse()** will return
 //! **None** when it is not possible to calculate.
 //!
 //! Division is defined in terms of the multiplicative inverse, so it is likewise only supported for
 //! signed integers, and will return **None** when the quotient does not exist. Assigned division (/=)
 //! will **panic** if the quotient does not exist.
 //!
-//! The .pow() method is fully supported for unsigned integer types. It also works for signed integer
+//! The **.pow()** method is fully supported for unsigned integer types. It also works for signed integer
 //! types, but it will **panic** if given a negative exponent. If negative exponents are possible,
-//! use .pow_signed(), which will return **None** if the result does not exist.
+//! use **.pow_signed()**, which will return **None** if the result does not exist.
 //!
 //! ```
 //! use bare_metal_modulo::ModNum;
