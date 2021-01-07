@@ -47,7 +47,7 @@
 //! ```
 //!
 //! # Arithmetic
-//! Addition, subtraction, multiplication, and exponentiation are all fully supported for both
+//! Addition, subtraction, and multiplication are all fully supported for both
 //! signed and unsigned integer types. Note that the right-hand side will be an integer of the
 //! corresponding type, rather than another ModNum.
 //!
@@ -60,6 +60,10 @@
 //!
 //! Unary negation is supported for both signed and unsigned integers. Multiplicative
 //! inverse (using the **inverse()** method) is supported for signed integers only.
+//!
+//! The .pow() method is fully supported for unsigned integer types. It also works for signed integer
+//! types, but it will panic if given a negative exponent. If negative exponents are possible,
+//! use .pow_signed().
 //! ```
 //! use bare_metal_modulo::ModNum;
 //! use num::traits::Pow;
@@ -160,7 +164,7 @@
 //! ```
 use core::mem;
 use num::{Integer, Signed, NumCast};
-use core::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Neg};
+use core::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Neg, Div};
 use num::traits::Pow;
 
 /// Represents an integer **a (mod m)**
@@ -192,7 +196,7 @@ impl <N: Integer+Copy> ModNum<N> {
     }
 }
 
-impl <N: Integer + Signed + Copy> ModNum<N> {
+impl <N: Integer + Signed + Copy + NumCast> ModNum<N> {
 
     /// Solves a pair of modular equations using the [Chinese Remainder Theorem](https://byorgey.wordpress.com/2020/03/03/competitive-programming-in-haskell-modular-arithmetic-part-2/).
     ///
@@ -247,6 +251,15 @@ impl <N: Integer + Signed + Copy> ModNum<N> {
     pub fn inverse(&self) -> Option<ModNum<N>> {
         let (g, _, inv) = ModNum::<N>::egcd(self.m(), self.a());
         if g == N::one() {Some(ModNum::new(inv, self.m()))} else {None}
+    }
+
+    /// Returns a^rhs (mod m). Handles negative exponents correctly, unlike .pow().
+    pub fn pow_signed(&self, rhs: N) -> Option<ModNum<N>> {
+        if rhs < N::zero() {
+            self.pow(-rhs).inverse()
+        } else {
+            Some(self.pow(rhs))
+        }
     }
 }
 
@@ -307,11 +320,25 @@ impl <N:Integer+Copy> MulAssign<N> for ModNum<N> {
     }
 }
 
+impl <N:Integer+Copy+Signed+NumCast> Div<N> for ModNum<N> {
+    type Output = Option<ModNum<N>>;
+
+    fn div(self, rhs: N) -> Self::Output {
+        ModNum::new(rhs, self.m()).inverse().map(|inv| self * inv.a())
+    }
+}
+
 impl <N:Integer+Copy+NumCast> Pow<N> for ModNum<N> {
     type Output = ModNum<N>;
 
+    /// Returns a^rhs (mod m), for rhs >= 0.
+    /// Implements efficient modular exponentiation by [repeated squaring](https://byorgey.wordpress.com/2020/02/15/competitive-programming-in-haskell-modular-arithmetic-part-1/).
+    ///
+    /// Panics if rhs < 0. If negative exponents are possible, use .pow_signed()
     fn pow(self, rhs: N) -> Self::Output {
-        if rhs == N::zero() {
+        if rhs < N::zero() {
+            panic!("Negative exponentiation undefined for ModNum.pow(). Try .pow_signed() instead.")
+        } else if rhs == N::zero() {
             ModNum::new(N::one(), self.m())
         } else {
             let r = self.pow(rhs.div_floor(&(N::from(2).unwrap())));
@@ -476,6 +503,11 @@ mod tests {
     }
 
     #[test]
+    fn test_division() {
+        // TODO: Write some tests, sometime.
+    }
+
+    #[test]
     fn test_pow() {
         let m = ModNum::new(2, 5);
         for (exp, result) in (2..).zip([4, 3, 1, 2].iter().cycle()).take(20) {
@@ -490,5 +522,13 @@ mod tests {
             .iter().copied().map(|(a, m)| ModNum::new(a, m));
         let solution = ModNum::<i128>::chinese_remainder_system(&mut values).unwrap().a();
         assert_eq!(solution, 762009420388013796);
+    }
+
+    #[test]
+    fn test_negative_exp() {
+        let m = ModNum::new(2, 5);
+        for (exp, result) in (2..).map(|n| -n).zip([4, 2, 1, 3].iter().cycle()).take(20) {
+            assert_eq!(m.pow_signed(exp).unwrap().a(), *result);
+        }
     }
 }
