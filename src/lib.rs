@@ -7,7 +7,7 @@
 //!
 //! ModNum objects represent a value modulo m. The value and modulo can be of any
 //! primitive integer type.  Arithmetic operators include +, - (both unary and binary),
-//! *, pow(), and ==. Additional capabilities include computing multiplicative inverses
+//! *, /, pow(), and ==. Additional capabilities include computing multiplicative inverses
 //! and solving modular equations.
 //!
 //! ModNum was originally developed to facilitate bidirectional navigation through fixed-size
@@ -58,15 +58,10 @@
 //!    ModNum structs are irrelevant.
 //! 3. If the desired operand is another ModNum, it is ergonomic to call **.a()** to obtain the operand.
 //!
-//! Unary negation is supported for both signed and unsigned integers. Multiplicative
-//! inverse (using the **inverse()** method) is supported for signed integers only.
+//! Unary negation is supported for both signed and unsigned integers.
 //!
-//! The .pow() method is fully supported for unsigned integer types. It also works for signed integer
-//! types, but it will panic if given a negative exponent. If negative exponents are possible,
-//! use .pow_signed().
 //! ```
 //! use bare_metal_modulo::ModNum;
-//! use num::traits::Pow;
 //!
 //! let mut m = ModNum::new(2, 5);
 //! m += 2;
@@ -86,6 +81,24 @@
 //! m = -m;
 //! assert_eq!(m, ModNum::new(2, 5));
 //!
+//! ```
+//! Multiplicative inverse (using the **inverse()** method) is supported for signed integers only.
+//! As inverses are only defined when **a** and **m** are relatively prime, **inverse()** will return
+//! **None** when it is not possible to calculate.
+//!
+//! Division is defined in terms of the multiplicative inverse, so it is likewise only supported for
+//! signed integers, and will return **None** when the quotient does not exist. Assigned division (/=)
+//! will **panic** if the quotient does not exist.
+//!
+//! The .pow() method is fully supported for unsigned integer types. It also works for signed integer
+//! types, but it will **panic** if given a negative exponent. If negative exponents are possible,
+//! use .pow_signed(), which will return **None** if the result does not exist.
+//!
+//! ```
+//! use bare_metal_modulo::ModNum;
+//! use num::traits::Pow;
+//!
+//! let m = ModNum::new(2, 5);
 //! assert_eq!(m.pow(2), ModNum::new(4, 5));
 //! assert_eq!(m.pow(3), ModNum::new(3, 5));
 //! assert_eq!(m.pow(4), ModNum::new(1, 5));
@@ -94,6 +107,20 @@
 //!
 //! let i = m.inverse().unwrap();
 //! assert_eq!(m * i.a(), 1);
+//!
+//! assert_eq!(m.pow_signed(-2).unwrap(), ModNum::new(4, 5));
+//! assert_eq!(m.pow_signed(-3).unwrap(), ModNum::new(2, 5));
+//! assert_eq!(m.pow_signed(-4).unwrap(), ModNum::new(1, 5));
+//! assert_eq!(m.pow_signed(-5).unwrap(), ModNum::new(3, 5));
+//! assert_eq!(m.pow_signed(-6).unwrap(), ModNum::new(4, 5));
+//!
+//! let m = ModNum::new(6, 11);
+//! assert_eq!((m / 2).unwrap().a(), 3);
+//! assert_eq!((m / 4).unwrap().a(), 7);
+//! assert_eq!((m / 5).unwrap().a(), 10);
+//! assert_eq!((m / 6).unwrap().a(), 1);
+//! assert_eq!((m / 8).unwrap().a(), 9);
+//! assert_eq!(m / 0, None);
 //! ```
 //!
 //! The **==** operator can be used to compare two ModNums or a ModNum and an
@@ -164,7 +191,7 @@
 //! ```
 use core::mem;
 use num::{Integer, Signed, NumCast};
-use core::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Neg, Div};
+use core::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Neg, Div, DivAssign};
 use num::traits::Pow;
 
 /// Represents an integer **a (mod m)**
@@ -326,6 +353,15 @@ impl <N:Integer+Copy+Signed+NumCast> Div<N> for ModNum<N> {
 
     fn div(self, rhs: N) -> Self::Output {
         ModNum::new(rhs, self.m()).inverse().map(|inv| self * inv.a())
+    }
+}
+
+impl <N:Integer+Copy+Signed+NumCast> DivAssign<N> for ModNum<N> {
+
+    /// Performs division in place.
+    /// Panics if the quotient is undefined.
+    fn div_assign(&mut self, rhs: N) {
+        *self = (*self / rhs).unwrap();
     }
 }
 
@@ -505,6 +541,9 @@ mod tests {
     #[test]
     fn test_division() {
         let m = ModNum::new(6, 11);
+        for undefined in [0, 11].iter() {
+            assert_eq!(m / *undefined, None);
+        }
         for (divisor, quotient) in [(1, 6), (2, 3), (4, 7), (5, 10), (8, 9)].iter() {
             for (d, q) in [(divisor, quotient), (quotient, divisor)].iter() {
                 let result = (m / **d).unwrap();
