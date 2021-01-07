@@ -272,7 +272,7 @@ impl <N: Integer + Signed + Copy + NumCast> ModNum<N> {
     /// This is my translation into Rust of [Brent Yorgey's Haskell implementation](https://byorgey.wordpress.com/2020/02/15/competitive-programming-in-haskell-modular-arithmetic-part-1/).
     ///
     /// Let **m = ModNum::new(a, m)**, where **a** and **m** are relatively prime.
-    /// Then **m * m.inverse().unwrap().a()** is congruent to 1 (mod m).
+    /// Then **m * m.inverse().unwrap().a()** is congruent to **1 (mod m)**.
     ///
     /// Returns None if **a** and **m** are not relatively prime.
     pub fn inverse(&self) -> Option<ModNum<N>> {
