@@ -253,7 +253,8 @@ impl <N: Integer + Signed + Copy + NumCast> ModNum<N> {
         if g == N::one() {Some(ModNum::new(inv, self.m()))} else {None}
     }
 
-    /// Returns a^rhs (mod m). Handles negative exponents correctly, unlike .pow().
+    /// Returns Some(a^rhs (mod m)). Handles negative exponents correctly, unlike .pow().
+    /// Returns None if the inverse is undefined.
     pub fn pow_signed(&self, rhs: N) -> Option<ModNum<N>> {
         if rhs < N::zero() {
             self.pow(-rhs).inverse()
@@ -437,7 +438,6 @@ mod tests {
             if a == 0 {
                 assert!(inv.is_none());
             } else {
-                println!("m: {:?}, inv: {:?}", m, inv);
                 assert_eq!(m * inv.unwrap().a(), 1);
             }
         }
@@ -504,7 +504,14 @@ mod tests {
 
     #[test]
     fn test_division() {
-        // TODO: Write some tests, sometime.
+        let m = ModNum::new(6, 11);
+        for (divisor, quotient) in [(1, 6), (2, 3), (4, 7), (5, 10), (8, 9)].iter() {
+            for (d, q) in [(divisor, quotient), (quotient, divisor)].iter() {
+                let result = (m / **d).unwrap();
+                assert_eq!(result * **d, m);
+                assert_eq!(result.a(), **q);
+            }
+        }
     }
 
     #[test]

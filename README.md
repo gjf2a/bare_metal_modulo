@@ -11,3 +11,7 @@ traverses the entire ring starting at any desired value.
 
 Note that ModNum is not designed to work with arbitrary-length integers, as it requires its
 integer type to implement the Copy trait.
+
+# Updates
+**0.2**: Added modular exponentiation and inverse.
+**0.3**: Added division and modular exponentiation with negative exponents.
