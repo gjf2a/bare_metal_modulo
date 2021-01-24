@@ -44,6 +44,9 @@
 //! let p = ModNum::new(-4, 3);
 //! assert_eq!(p.a(), 2);
 //! assert_eq!(p.m(), 3);
+//!
+//! let f = format!("{}", p);
+//! assert_eq!(f, "2 (mod 3)")
 //! ```
 //!
 //! # Arithmetic
