@@ -550,12 +550,12 @@ impl <N: Integer+Copy> DoubleEndedIterator for ModNumIterator<N> {
 impl <N: Integer+Copy+Debug+Display> Saturating for ModNum<N> {
     fn saturating_add(self, v: Self) -> Self {
         assert_eq!(self.m(), v.m());
-        println!("Adding {} + {}", self, v);
+        //println!("Adding {} + {}", self, v);
         if self.a() + v.a() >= self.m() {
-            println!("Saturating");
+            //println!("Saturating");
             ModNum::new(self.m() - N::one(), self.m())
         } else {
-            println!("Normal add");
+            //println!("Normal add");
             self + v
         }
     }
