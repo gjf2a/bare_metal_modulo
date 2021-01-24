@@ -114,6 +114,7 @@
 //! assert_eq!(m.pow(6), ModNum::new(4, 5));
 //!
 //! assert_eq!(m.pow(ModNum::new(4, 5)), ModNum::new(1, 5));
+//!
 //! // Note: Very different result from m.pow(6)!
 //! assert_eq!(m.pow(ModNum::new(6, 5)), ModNum::new(2, 5));
 //!
