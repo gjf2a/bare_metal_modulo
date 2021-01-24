@@ -85,6 +85,10 @@
 //! assert_eq!(m - ModNum::new(4, 5), ModNum::new(2, 5));
 //! m -= ModNum::new(4, 5);
 //! assert_eq!(m, ModNum::new(2, 5));
+//!
+//! assert_eq!(m * ModNum::new(3, 5), ModNum::new(1, 5));
+//! m *= ModNum::new(3, 5);
+//! assert_eq!(m, ModNum::new(1, 5));
 //! ```
 //! Multiplicative inverse (using the **.inverse()** method) is supported for signed integers only.
 //! As inverses are only defined when **a** and **m** are relatively prime, **.inverse()** will return
@@ -327,16 +331,15 @@ impl <N:Integer+Copy+Debug> Add<ModNum<N>> for ModNum<N> {
     type Output = ModNum<N>;
 
     fn add(self, rhs: ModNum<N>) -> Self::Output {
-        let mut result = self;
-        result += rhs;
-        result
+        assert_eq!(self.m(), rhs.m());
+        self + rhs.a()
     }
 }
 
 impl <N:Integer+Copy+Debug> AddAssign<ModNum<N>> for ModNum<N> {
     fn add_assign(&mut self, rhs: ModNum<N>) {
         assert_eq!(self.m(), rhs.m());
-        *self = ModNum::new(self.a() + rhs.a(), self.m());
+        *self = *self + rhs.a();
     }
 }
 
@@ -366,9 +369,8 @@ impl <N:Integer+Copy+Debug> Sub<ModNum<N>> for ModNum<N> {
     type Output = ModNum<N>;
 
     fn sub(self, rhs: ModNum<N>) -> Self::Output {
-        let mut result = self;
-        result -= rhs;
-        result
+        assert_eq!(self.m(), rhs.m());
+        self - rhs.a()
     }
 }
 
@@ -393,6 +395,22 @@ impl <N:Integer+Copy> MulAssign<N> for ModNum<N> {
     }
 }
 
+impl <N:Integer+Copy+Debug> Mul<ModNum<N>> for ModNum<N> {
+    type Output = ModNum<N>;
+
+    fn mul(self, rhs: ModNum<N>) -> Self::Output {
+        assert_eq!(self.m(), rhs.m());
+        self * rhs.a()
+    }
+}
+
+impl <N:Integer+Copy+Debug> MulAssign<ModNum<N>> for ModNum<N> {
+    fn mul_assign(&mut self, rhs: ModNum<N>) {
+        assert_eq!(self.m(), rhs.m());
+        *self = *self * rhs.a();
+    }
+}
+
 impl <N:Integer+Copy+Signed+NumCast> Div<N> for ModNum<N> {
     type Output = Option<ModNum<N>>;
 
@@ -407,6 +425,25 @@ impl <N:Integer+Copy+Signed+NumCast> DivAssign<N> for ModNum<N> {
     /// Panics if the quotient is undefined.
     fn div_assign(&mut self, rhs: N) {
         *self = (*self / rhs).unwrap();
+    }
+}
+
+impl <N:Integer+Copy+Signed+NumCast+Debug> Div<ModNum<N>> for ModNum<N> {
+    type Output = Option<ModNum<N>>;
+
+    fn div(self, rhs: ModNum<N>) -> Self::Output {
+        assert_eq!(self.m(), rhs.m());
+        self / rhs.a()
+    }
+}
+
+impl <N:Integer+Copy+Signed+NumCast+Debug> DivAssign<ModNum<N>> for ModNum<N> {
+
+    /// Performs division in place.
+    /// Panics if the quotient is undefined.
+    fn div_assign(&mut self, rhs: ModNum<N>) {
+        assert_eq!(self.m(), rhs.m());
+        *self = (*self / rhs.a()).unwrap();
     }
 }
 
@@ -430,6 +467,15 @@ impl <N:Integer+Copy+NumCast> Pow<N> for ModNum<N> {
             }
             sq
         }
+    }
+}
+
+impl <N:Integer+Copy+NumCast+Debug> Pow<ModNum<N>> for ModNum<N> {
+    type Output = ModNum<N>;
+
+    fn pow(self, rhs: ModNum<N>) -> Self::Output {
+        assert_eq!(self.m(), rhs.m());
+        self.pow(rhs.a())
     }
 }
 
