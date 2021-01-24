@@ -106,6 +106,9 @@
 //! assert_eq!(m.saturating_sub(ModNum::new(1, 5)), ModNum::new(1, 5));
 //! assert_eq!(m.saturating_sub(ModNum::new(2, 5)), ModNum::new(0, 5));
 //! assert_eq!(m.saturating_sub(ModNum::new(3, 5)), ModNum::new(0, 5));
+//!
+//! let n = ModNum::new(1, 80);
+//! assert_eq!(n.saturating_add(n), ModNum::new(2, 80));
 //! ```
 //!
 //! Multiplicative inverse (using the **.inverse()** method) is supported for signed integers only.
@@ -550,12 +553,9 @@ impl <N: Integer+Copy> DoubleEndedIterator for ModNumIterator<N> {
 impl <N: Integer+Copy+Debug+Display> Saturating for ModNum<N> {
     fn saturating_add(self, v: Self) -> Self {
         assert_eq!(self.m(), v.m());
-        //println!("Adding {} + {}", self, v);
         if self.a() + v.a() >= self.m() {
-            //println!("Saturating");
             ModNum::new(self.m() - N::one(), self.m())
         } else {
-            //println!("Normal add");
             self + v
         }
     }
