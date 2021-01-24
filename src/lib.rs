@@ -113,6 +113,10 @@
 //! assert_eq!(m.pow(5), ModNum::new(2, 5));
 //! assert_eq!(m.pow(6), ModNum::new(4, 5));
 //!
+//! assert_eq!(m.pow(ModNum::new(4, 5)), ModNum::new(1, 5));
+//! // Note: Very different result from m.pow(6)!
+//! assert_eq!(m.pow(ModNum::new(6, 5)), ModNum::new(2, 5));
+//!
 //! let i = m.inverse().unwrap();
 //! assert_eq!(m * i.a(), 1);
 //!
@@ -129,6 +133,9 @@
 //! assert_eq!((m / 6).unwrap().a(), 1);
 //! assert_eq!((m / 8).unwrap().a(), 9);
 //! assert_eq!(m / 0, None);
+//!
+//! assert_eq!((m / ModNum::new(2, 11)).unwrap(), ModNum::new(3, 11));
+//! assert_eq!((m / ModNum::new(4, 11)).unwrap(), ModNum::new(7, 11));
 //! ```
 //!
 //! The **==** operator can be used to compare two ModNums or a ModNum and an
