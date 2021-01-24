@@ -48,15 +48,9 @@
 //!
 //! # Arithmetic
 //! Addition, subtraction, and multiplication are all fully supported for both
-//! signed and unsigned integer types. Note that the right-hand side will be an integer of the
-//! corresponding type, rather than another ModNum.
-//!
-//! I have personally found this to be most convenient in practice for three reasons:
-//! 1. As the second operand is not a ModNum, there is no need to check to ensure that their
-//!    modulo components match. The user ensures that the operand value makes sense in context.
-//! 2. In code I have written, I find that the operand value emerges from a context in which
-//!    ModNum structs are irrelevant.
-//! 3. If the desired operand is another ModNum, it is ergonomic to call **.a()** to obtain the operand.
+//! signed and unsigned integer types. The right-hand side may either be an integer of the
+//! corresponding type or another ModNum. In the latter case, if the modulo values differ
+//! it will **panic**.
 //!
 //! Unary negation is supported for both signed and unsigned integers.
 //!
@@ -81,6 +75,13 @@
 //! m = -m;
 //! assert_eq!(m, ModNum::new(2, 5));
 //!
+//! assert_eq!(m + ModNum::new(4, 5), ModNum::new(1, 5));
+//! m += ModNum::new(4, 5);
+//! assert_eq!(m, ModNum::new(1, 5));
+//!
+//! assert_eq!(m - ModNum::new(4, 5), ModNum::new(2, 5));
+//! m -= ModNum::new(4, 5);
+//! assert_eq!(m, ModNum::new(2, 5));
 //! ```
 //! Multiplicative inverse (using the **.inverse()** method) is supported for signed integers only.
 //! As inverses are only defined when **a** and **m** are relatively prime, **.inverse()** will return
@@ -193,12 +194,19 @@ use core::mem;
 use num::{Integer, Signed, NumCast};
 use core::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Neg, Div, DivAssign};
 use num::traits::Pow;
+use core::fmt::{Debug, Display, Formatter};
 
 /// Represents an integer **a (mod m)**
 #[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd)]
 pub struct ModNum<N> {
     num: N,
     modulo: N
+}
+
+impl <N:Display> Display for ModNum<N> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{} (mod {})", self.num, self.modulo)
+    }
 }
 
 impl <N: Integer+Copy> ModNum<N> {
@@ -312,6 +320,23 @@ impl <N:Integer+Copy> AddAssign<N> for ModNum<N> {
     }
 }
 
+impl <N:Integer+Copy+Debug> Add<ModNum<N>> for ModNum<N> {
+    type Output = ModNum<N>;
+
+    fn add(self, rhs: ModNum<N>) -> Self::Output {
+        let mut result = self;
+        result += rhs;
+        result
+    }
+}
+
+impl <N:Integer+Copy+Debug> AddAssign<ModNum<N>> for ModNum<N> {
+    fn add_assign(&mut self, rhs: ModNum<N>) {
+        assert_eq!(self.m(), rhs.m());
+        *self = ModNum::new(self.a() + rhs.a(), self.m());
+    }
+}
+
 impl <N:Integer+Copy> Neg for ModNum<N> {
     type Output = ModNum<N>;
 
@@ -331,6 +356,23 @@ impl <N:Integer+Copy> Sub<N> for ModNum<N> {
 impl <N:Integer+Copy> SubAssign<N> for ModNum<N> {
     fn sub_assign(&mut self, rhs: N) {
         *self = *self - rhs;
+    }
+}
+
+impl <N:Integer+Copy+Debug> Sub<ModNum<N>> for ModNum<N> {
+    type Output = ModNum<N>;
+
+    fn sub(self, rhs: ModNum<N>) -> Self::Output {
+        let mut result = self;
+        result -= rhs;
+        result
+    }
+}
+
+impl <N:Integer+Copy+Debug> SubAssign<ModNum<N>> for ModNum<N> {
+    fn sub_assign(&mut self, rhs: ModNum<N>) {
+        assert_eq!(self.m(), rhs.m());
+        *self += -rhs;
     }
 }
 

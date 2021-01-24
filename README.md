@@ -14,5 +14,8 @@ Note that ModNum is not designed to work with arbitrary-length integers, as it r
 integer type to implement the Copy trait.
 
 # Updates
-- **0.2**: Added modular exponentiation and inverse.
-- **0.3**: Added division and modular exponentiation with negative exponents.
+* **0.2**: Added modular exponentiation and inverse.
+* **0.3**: Added division and modular exponentiation with negative exponents.
+* **0.4**: 
+  * Added `ModNum` as a right-hand side option for arithmetic operators.
+  * Implemented `Display` for `ModNum` objects.  
