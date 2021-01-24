@@ -18,4 +18,6 @@ integer type to implement the Copy trait.
 * **0.3**: Added division and modular exponentiation with negative exponents.
 * **0.4**: 
   * Added `ModNum` as a right-hand side option for arithmetic operators.
-  * Implemented `Display` for `ModNum` objects.  
+  * Implemented `Display` for `ModNum` objects.
+* **0.5**:
+  * Implemented the [`num::Saturating`](https://docs.rs/num/0.3.1/num/trait.Saturating.html) trait.

@@ -90,6 +90,24 @@
 //! m *= ModNum::new(3, 5);
 //! assert_eq!(m, ModNum::new(1, 5));
 //! ```
+//!
+//! Saturating addition and subtraction are often useful relative to the modulus, so the
+//! [`num::Saturating`](https://docs.rs/num/0.3.1/num/trait.Saturating.html) trait is implemented
+//! as well.
+//!
+//! ```
+//! use bare_metal_modulo::ModNum;
+//! use num::Saturating;
+//!
+//! let m = ModNum::new(2, 5);
+//! assert_eq!(m.saturating_add(ModNum::new(1, 5)), ModNum::new(3, 5));
+//! assert_eq!(m.saturating_add(ModNum::new(2, 5)), ModNum::new(4, 5));
+//! assert_eq!(m.saturating_add(ModNum::new(3, 5)), ModNum::new(4, 5));
+//! assert_eq!(m.saturating_sub(ModNum::new(1, 5)), ModNum::new(1, 5));
+//! assert_eq!(m.saturating_sub(ModNum::new(2, 5)), ModNum::new(0, 5));
+//! assert_eq!(m.saturating_sub(ModNum::new(3, 5)), ModNum::new(0, 5));
+//! ```
+//!
 //! Multiplicative inverse (using the **.inverse()** method) is supported for signed integers only.
 //! As inverses are only defined when **a** and **m** are relatively prime, **.inverse()** will return
 //! **None** when it is not possible to calculate.
@@ -206,7 +224,7 @@
 //! assert_eq!(solution.unwrap().a(), 762009420388013796);
 //! ```
 use core::mem;
-use num::{Integer, Signed, NumCast};
+use num::{Integer, Signed, NumCast, Saturating};
 use core::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Neg, Div, DivAssign};
 use num::traits::Pow;
 use core::fmt::{Debug, Display, Formatter};
@@ -526,6 +544,26 @@ impl <N: Integer+Copy> Iterator for ModNumIterator<N> {
 impl <N: Integer+Copy> DoubleEndedIterator for ModNumIterator<N> {
     fn next_back(&mut self) -> Option<Self::Item> {
         update(&mut self.finished, &mut self.next_back, |m, u| *m - u, self.next)
+    }
+}
+
+impl <N: Integer+Copy+Debug> Saturating for ModNum<N> {
+    fn saturating_add(self, v: Self) -> Self {
+        assert_eq!(self.m(), v.m());
+        if self.a() + v.a() >= self.m() {
+            ModNum::new(self.m() - N::one(), self.m())
+        } else {
+            self + v
+        }
+    }
+
+    fn saturating_sub(self, v: Self) -> Self {
+        assert_eq!(self.m(), v.m());
+        if self.a() < v.a() {
+            ModNum::new(N::zero(), self.m())
+        } else {
+            self - v
+        }
     }
 }
 
