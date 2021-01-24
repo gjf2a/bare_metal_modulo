@@ -106,9 +106,6 @@
 //! assert_eq!(m.saturating_sub(ModNum::new(1, 5)), ModNum::new(1, 5));
 //! assert_eq!(m.saturating_sub(ModNum::new(2, 5)), ModNum::new(0, 5));
 //! assert_eq!(m.saturating_sub(ModNum::new(3, 5)), ModNum::new(0, 5));
-//!
-//! let n = ModNum::new(1, 80);
-//! assert_eq!(n.saturating_add(n), ModNum::new(2, 80));
 //! ```
 //!
 //! Multiplicative inverse (using the **.inverse()** method) is supported for signed integers only.
