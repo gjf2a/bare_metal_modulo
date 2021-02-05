@@ -23,6 +23,8 @@ they require their integer type to implement the `Copy` trait.
   * Added `ModNumC`, which uses [const generics](https://rust-lang.github.io/rfcs/2000-const-generics.html)
     to enable compile-time checking of compatible modulo. Its functionality is a proper
     subset of `ModNum`.
+  * Added `MNum` trait to allow `ModNumIterator` to work with both `ModNum` and `ModNumC`.
+    **Note**: To use the `.a()` and `.m()` methods, be sure to import `MNum` (or just `use bare_metal_modulo::*;`)
 * **0.6**:
   * Learned that [`num::Saturating`](https://docs.rs/num/0.3.1/num/trait.Saturating.html) is deprecated.
   * Removed [`num::Saturating`](https://docs.rs/num/0.3.1/num/trait.Saturating.html) implementation.
