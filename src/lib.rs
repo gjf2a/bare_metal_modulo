@@ -32,7 +32,7 @@
 //! reduced value, regardless of how it was initialized.
 //!
 //! ```
-//! use bare_metal_modulo::ModNum;
+//! use bare_metal_modulo::*;
 //!
 //! let m = ModNum::new(7, 10);
 //! assert_eq!(m.a(), 7);
@@ -123,7 +123,7 @@
 //! use **.pow_signed()**, which will return **None** if the result does not exist.
 //!
 //! ```
-//! use bare_metal_modulo::ModNum;
+//! use bare_metal_modulo::*;
 //! use num::traits::Pow;
 //!
 //! let m = ModNum::new(2, 5);
@@ -179,7 +179,7 @@
 //! both forward and backward iteration.
 //!
 //! ```
-//! use bare_metal_modulo::ModNum;
+//! use bare_metal_modulo::*;
 //!
 //! let forward: Vec<usize> = ModNum::new(2, 5).iter().map(|mn| mn.a()).collect();
 //! assert_eq!(forward, vec![2, 3, 4, 0, 1]);
@@ -209,7 +209,7 @@
 //! **i128** is used.
 //!
 //! ```
-//! use bare_metal_modulo::ModNum;
+//! use bare_metal_modulo::*;
 //!
 //! let mut values = (2..).zip((5..).step_by(2)).map(|(a, m)| ModNum::new(a, m)).take(3);
 //! let solution = ModNum::<i128>::chinese_remainder_system(&mut values);
