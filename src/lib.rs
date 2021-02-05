@@ -194,7 +194,7 @@
 //! assert!(m == -3);
 //! assert!(m != 3);
 //!
-//! let m: ModNumC<i32,5> = ModNumC::new(5);
+//! let m: ModNumC<i32,5> = ModNumC::new(2);
 //! assert!(m == 2);
 //! assert!(m == 7);
 //! assert!(m == -3);
@@ -819,6 +819,20 @@ mod tests {
             assert_eq!(n - sub, target);
         }
     }
+
+    #[test]
+    fn test_congruence_c() {
+        let m: ModNumC<i32,5> = ModNumC::new(2);
+        for c in (-13..13).step_by(5) {
+            assert_eq!(m, c);
+            for i in -2..=2 {
+                if i == 0 {
+                    assert_eq!(m, c);
+                } else {
+                    assert_ne!(m, c + i);
+                }
+            }
+        }    }
 
     #[test]
     fn test_iter_up() {
