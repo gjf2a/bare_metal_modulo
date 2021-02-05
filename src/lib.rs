@@ -3,6 +3,7 @@
 //! # Overview
 //! The bare_metal_modulo crate includes two structs:
 //! - ModNum is a highly ergonomic modular arithmetic struct intended for no_std use.
+//! - ModNumC is similar to ModNum, but uses [const generics](https://rust-lang.github.io/rfcs/2000-const-generics.html) to specify the modulo.
 //! - ModNumIterator is a double-ended iterator that starts with the ModNum upon which it is
 //!   invoked, making a complete traversal of the elements in that ModNum's ring.
 //!
@@ -11,12 +12,16 @@
 //! *, /, pow(), and ==. Additional capabilities include computing multiplicative inverses
 //! and solving modular equations.
 //!
-//! ModNum was originally developed to facilitate bidirectional navigation through fixed-size
-//! arrays at arbitrary starting points. This is facilitated by a double-ended iterator that
-//! traverses the entire ring starting at any desired value.
+//! ModNumC objects likewise represent a value modulo M, where M is a generic constant of the
+//! usize type. Arithmetic operators include +, - (both unary and binary), *, and ==.
 //!
-//! Note that ModNum is not designed to work with arbitrary-length integers, as it requires its
-//! integer type to implement the Copy trait.
+//! This library was originally developed to facilitate bidirectional navigation through fixed-size
+//! arrays at arbitrary starting points. This is facilitated by a double-ended iterator that
+//! traverses the entire ring starting at any desired value. The iterator supports both ModNum and
+//! ModNumC.
+//!
+//! Note that ModNum and ModNumC are not designed to work with arbitrary-length integers, as
+//! they require their integer type to implement the Copy trait.
 //!
 //! For the [2020 Advent of Code](https://adventofcode.com/2020)
 //! ([Day 13](https://adventofcode.com/2020/day/13) part 2),
@@ -27,7 +32,7 @@
 //! by [Brent Yorgey](http://ozark.hendrix.edu/~yorgey/).
 //!
 //! # Accessing Values
-//! Each ModNum represents an integer **a (mod m)**. To access these values, use the
+//! Each ModNum/ModNumC represents an integer **a (mod m)**. To access these values, use the
 //! corresponding **a()** and **m()** methods. Note that **a()** will always return a fully
 //! reduced value, regardless of how it was initialized.
 //!
@@ -47,19 +52,24 @@
 //! assert_eq!(p.m(), 3);
 //!
 //! let f = format!("{}", p);
-//! assert_eq!(f, "2 (mod 3)")
+//! assert_eq!(f, "2 (mod 3)");
+//!
+//! // ModNumC variables indicate the modulo using a type annotation.
+//! let q: ModNumC<i32, 17> = ModNumC::new(23);
+//! assert_eq!(q, 6);
 //! ```
 //!
 //! # Arithmetic
 //! Addition, subtraction, and multiplication are all fully supported for both
 //! signed and unsigned integer types. The right-hand side may either be an integer of the
 //! corresponding type or another ModNum. In the latter case, if the modulo values differ
-//! it will **panic**.
+//! it will **panic**. For a ModNumC, there is no risk of a panic, as any disparity will be
+//! flagged at compile time.
 //!
 //! Unary negation is supported for both signed and unsigned integers.
 //!
 //! ```
-//! use bare_metal_modulo::ModNum;
+//! use bare_metal_modulo::*;
 //!
 //! let mut m = ModNum::new(2, 5);
 //! m += 2;
@@ -90,6 +100,10 @@
 //! assert_eq!(m * ModNum::new(3, 5), ModNum::new(1, 5));
 //! m *= ModNum::new(3, 5);
 //! assert_eq!(m, ModNum::new(1, 5));
+//!
+//! let mut m: ModNumC<isize,5> = ModNumC::new(2);
+//! m *= 3;
+//! assert_eq!(m, ModNumC::new(1));
 //! ```
 //!
 //! Saturating addition and subtraction are often useful relative to the modulus, so the
@@ -97,7 +111,7 @@
 //! as well.
 //!
 //! ```
-//! use bare_metal_modulo::ModNum;
+//! use bare_metal_modulo::*;
 //! use num::traits::SaturatingAdd;
 //! use num::traits::SaturatingSub;
 //!
@@ -108,6 +122,14 @@
 //! assert_eq!(m.saturating_sub(&ModNum::new(1, 5)), ModNum::new(1, 5));
 //! assert_eq!(m.saturating_sub(&ModNum::new(2, 5)), ModNum::new(0, 5));
 //! assert_eq!(m.saturating_sub(&ModNum::new(3, 5)), ModNum::new(0, 5));
+//!
+//! let m: ModNumC<i32, 5> = ModNumC::new(2);
+//! assert_eq!(m.saturating_add(&ModNumC::new(1)), ModNumC::new(3));
+//! assert_eq!(m.saturating_add(&ModNumC::new(2)), ModNumC::new(4));
+//! assert_eq!(m.saturating_add(&ModNumC::new(3)), ModNumC::new(4));
+//! assert_eq!(m.saturating_sub(&ModNumC::new(1)), ModNumC::new(1));
+//! assert_eq!(m.saturating_sub(&ModNumC::new(2)), ModNumC::new(0));
+//! assert_eq!(m.saturating_sub(&ModNumC::new(3)), ModNumC::new(0));
 //! ```
 //!
 //! Multiplicative inverse (using the **.inverse()** method) is supported for signed integers only.
@@ -159,14 +181,20 @@
 //! assert_eq!((m / ModNum::new(4, 11)).unwrap(), ModNum::new(7, 11));
 //! ```
 //!
-//! The **==** operator can be used to compare two ModNums or a ModNum and an
+//! The **==** operator can be used to compare two ModNums, two ModNumCs or a ModNum/ModNumC and an
 //! integer of the corresponding type. In both cases, it represents congruence rather than
 //! strict equality.
 //!
 //! ```
-//! use bare_metal_modulo::ModNum;
+//! use bare_metal_modulo::*;
 //!
 //! let m = ModNum::new(2, 5);
+//! assert!(m == 2);
+//! assert!(m == 7);
+//! assert!(m == -3);
+//! assert!(m != 3);
+//!
+//! let m: ModNumC<i32,5> = ModNumC::new(5);
 //! assert!(m == 2);
 //! assert!(m == 7);
 //! assert!(m == -3);
@@ -185,6 +213,14 @@
 //! assert_eq!(forward, vec![2, 3, 4, 0, 1]);
 //!
 //! let reverse: Vec<usize> = ModNum::new(2, 5).iter().rev().map(|mn| mn.a()).collect();
+//! assert_eq!(reverse, vec![1, 0, 4, 3, 2]);
+//!
+//! let m: ModNumC<usize,5> = ModNumC::new(2);
+//! let forward: Vec<usize> = m.iter().map(|mn| mn.a()).collect();
+//! assert_eq!(forward, vec![2, 3, 4, 0, 1]);
+//!
+//! let m: ModNumC<usize,5> = ModNumC::new(2);
+//! let reverse: Vec<usize> = m.iter().rev().map(|mn| mn.a()).collect();
 //! assert_eq!(reverse, vec![1, 0, 4, 3, 2]);
 //! ```
 //!
@@ -605,7 +641,9 @@ impl <N:Copy+Integer+FromPrimitive, const M: usize> MNum for ModNumC<N,M> {
 
 impl <N:Copy+Integer+FromPrimitive, const M: usize> ModNumC<N,M> {
     pub fn new(num: N) -> Self {
-        ModNumC {num: num.mod_floor(&N::from_usize(M).unwrap())}
+        let mut result = ModNumC {num};
+        result.num = result.num.mod_floor(&result.m());
+        result
     }
 
     /// Returns an iterator starting at **a (mod m)** and ending at **a - 1 (mod m)**
@@ -713,6 +751,25 @@ impl <N:Integer+Copy+FromPrimitive, const M: usize> MulAssign<ModNumC<N,M>> for 
     }
 }
 
+impl <N: Integer+Copy+FromPrimitive, const M: usize> SaturatingAdd for ModNumC<N,M> {
+    fn saturating_add(&self, v: &Self) -> Self {
+        if self.a() + v.a() >= self.m() {
+            ModNumC::new(self.m() - N::one())
+        } else {
+            *self + *v
+        }
+    }
+}
+
+impl <N: Integer+Copy+FromPrimitive, const M: usize> SaturatingSub for ModNumC<N,M> {
+    fn saturating_sub(&self, v: &Self) -> Self {
+        if self.a() < v.a() {
+            ModNumC::new(N::zero())
+        } else {
+            *self - *v
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
