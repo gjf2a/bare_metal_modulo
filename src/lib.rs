@@ -1,4 +1,5 @@
 #![feature(const_generics)]
+#![allow(incomplete_features)]
 #![cfg_attr(not(test), no_std)]
 //! # Overview
 //! The bare_metal_modulo crate includes two structs:
