@@ -1,3 +1,4 @@
+#![feature(const_generics)]
 #![cfg_attr(not(test), no_std)]
 //! # Overview
 //! The bare_metal_modulo crate includes two structs:
@@ -230,6 +231,12 @@ use core::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Neg, Div, DivAss
 use num::traits::{Pow, SaturatingAdd, SaturatingSub};
 use core::fmt::{Debug, Display, Formatter};
 
+pub trait MNum : Copy + Eq + PartialEq {
+    type Num: Integer + Copy;
+    fn a(&self) -> Self::Num;
+    fn m(&self) -> Self::Num;
+}
+
 /// Represents an integer **a (mod m)**
 #[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd)]
 pub struct ModNum<N> {
@@ -237,9 +244,15 @@ pub struct ModNum<N> {
     modulo: N
 }
 
-impl <N:Display> Display for ModNum<N> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{} (mod {})", self.num, self.modulo)
+impl <N:Integer+Copy> MNum for ModNum<N> {
+    type Num = N;
+
+    fn a(&self) -> N {
+        self.num
+    }
+
+    fn m(&self) -> N {
+        self.modulo
     }
 }
 
@@ -249,19 +262,15 @@ impl <N: Integer+Copy> ModNum<N> {
         ModNum { num: a.mod_floor(&m), modulo: m }
     }
 
-    /// Returns the integer value **a** for **a (mod m)**
-    pub fn a(&self) -> N {
-        self.num
-    }
-
-    /// Returns the modulo value **m** for **a (mod m)**
-    pub fn m(&self) -> N {
-        self.modulo
-    }
-
     /// Returns an iterator starting at **a (mod m)** and ending at **a - 1 (mod m)**
-    pub fn iter(&self) -> ModNumIterator<N> {
+    pub fn iter(&self) -> ModNumIterator<N,ModNum<N>> {
         ModNumIterator::new(*self)
+    }
+}
+
+impl <N:Display+Integer+Copy> Display for ModNum<N> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{} (mod {})", self.a(), self.m())
     }
 }
 
@@ -509,19 +518,19 @@ impl <N:Integer+Copy+NumCast+Debug> Pow<ModNum<N>> for ModNum<N> {
 /// A double-ended iterator that starts with the ModNum upon which it is invoked,
 /// making a complete traversal of the elements in that ModNum's ring.
 #[derive(Debug)]
-pub struct ModNumIterator<N> {
-    next: ModNum<N>,
-    next_back: ModNum<N>,
+pub struct ModNumIterator<N:Integer+Copy,M:MNum<Num=N> + Add<N,Output=M> + Sub<N,Output=M>> {
+    next: M,
+    next_back: M,
     finished: bool
 }
 
-impl <N: Integer+Copy> ModNumIterator<N> {
-    pub fn new(mn: ModNum<N>) -> Self {
+impl <N: Integer+Copy,M:MNum<Num=N> + Add<N,Output=M> + Sub<N,Output=M>> ModNumIterator<N,M> {
+    pub fn new(mn: M) -> Self {
         ModNumIterator {next: mn, next_back: mn - N::one(), finished: false}
     }
 }
 
-fn update<N: Integer+Copy, F:Fn(&ModNum<N>,N)->ModNum<N>>(finished: &mut bool, update: &mut ModNum<N>, updater: F, target: ModNum<N>) -> Option<<ModNumIterator<N> as Iterator>::Item> {
+fn update<N: Integer+Copy, M:MNum<Num=N> + Add<N,Output=M> + Sub<N,Output=M>, F:Fn(&M,N)->M>(finished: &mut bool, update: &mut M, updater: F, target: M) -> Option<<ModNumIterator<N,M> as Iterator>::Item> {
     if *finished {
         None
     } else {
@@ -534,15 +543,15 @@ fn update<N: Integer+Copy, F:Fn(&ModNum<N>,N)->ModNum<N>>(finished: &mut bool, u
     }
 }
 
-impl <N: Integer+Copy> Iterator for ModNumIterator<N> {
-    type Item = ModNum<N>;
+impl <N: Integer+Copy, M:MNum<Num=N> + Add<N,Output=M> + Sub<N,Output=M>> Iterator for ModNumIterator<N,M> {
+    type Item = M;
 
     fn next(&mut self) -> Option<Self::Item> {
         update(&mut self.finished, &mut self.next, |m, u| *m + u, self.next_back)
     }
 }
 
-impl <N: Integer+Copy> DoubleEndedIterator for ModNumIterator<N> {
+impl <N: Integer+Copy, M:MNum<Num=N> + Add<N,Output=M> + Sub<N,Output=M>> DoubleEndedIterator for ModNumIterator<N,M> {
     fn next_back(&mut self) -> Option<Self::Item> {
         update(&mut self.finished, &mut self.next_back, |m, u| *m - u, self.next)
     }
@@ -567,6 +576,18 @@ impl <N: Integer+Copy+Debug+Display> SaturatingSub for ModNum<N> {
         } else {
             *self - *v
         }
+    }
+}
+
+/// Represents an integer **a (mod M)**
+#[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd)]
+pub struct ModNumC<N, const M: usize> {
+    num: N
+}
+
+impl <N:Display, const M: usize> Display for ModNumC<N,M> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{} (mod {})", self.num, M)
     }
 }
 
