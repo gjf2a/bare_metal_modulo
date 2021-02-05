@@ -226,7 +226,7 @@
 //! assert_eq!(solution.unwrap().a(), 762009420388013796);
 //! ```
 use core::mem;
-use num::{Integer, Signed, NumCast};
+use num::{Integer, Signed, NumCast, FromPrimitive};
 use core::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Neg, Div, DivAssign};
 use num::traits::{Pow, SaturatingAdd, SaturatingSub};
 use core::fmt::{Debug, Display, Formatter};
@@ -263,7 +263,7 @@ impl <N: Integer+Copy> ModNum<N> {
     }
 
     /// Returns an iterator starting at **a (mod m)** and ending at **a - 1 (mod m)**
-    pub fn iter(&self) -> ModNumIterator<N,ModNum<N>> {
+    pub fn iter(&self) -> ModNumIterator<N,Self> {
         ModNumIterator::new(*self)
     }
 }
@@ -591,6 +591,129 @@ impl <N:Display, const M: usize> Display for ModNumC<N,M> {
     }
 }
 
+impl <N:Copy+Integer+FromPrimitive, const M: usize> MNum for ModNumC<N,M> {
+    type Num = N;
+
+    fn a(&self) -> Self::Num {
+        self.num
+    }
+
+    fn m(&self) -> Self::Num {
+        N::from_usize(M).unwrap()
+    }
+}
+
+impl <N:Copy+Integer+FromPrimitive, const M: usize> ModNumC<N,M> {
+    pub fn new(num: N) -> Self {
+        ModNumC {num: num.mod_floor(&N::from_usize(M).unwrap())}
+    }
+
+    /// Returns an iterator starting at **a (mod m)** and ending at **a - 1 (mod m)**
+    pub fn iter(&self) -> ModNumIterator<N,Self> {
+        ModNumIterator::new(*self)
+    }
+}
+
+/// Returns **true** if **other** is congruent to **self.a() (mod self.m())**
+impl <N:Integer+Copy+FromPrimitive, const M: usize> PartialEq<N> for ModNumC<N,M> {
+    fn eq(&self, other: &N) -> bool {
+        *self == ModNumC::new(*other)
+    }
+}
+
+impl <N:Integer+Copy+FromPrimitive, const M: usize> Add<N> for ModNumC<N,M> {
+    type Output = ModNumC<N,M>;
+
+    fn add(self, rhs: N) -> Self::Output {
+        ModNumC::new(self.num + rhs)
+    }
+}
+
+impl <N:Integer+Copy+FromPrimitive, const M: usize> AddAssign<N> for ModNumC<N,M> {
+    fn add_assign(&mut self, rhs: N) {
+        *self = *self + rhs;
+    }
+}
+
+impl <N:Integer+Copy+FromPrimitive, const M: usize> Add<ModNumC<N,M>> for ModNumC<N,M> {
+    type Output = ModNumC<N,M>;
+
+    fn add(self, rhs: ModNumC<N,M>) -> Self::Output {
+        self + rhs.a()
+    }
+}
+
+impl <N:Integer+Copy+FromPrimitive, const M: usize> AddAssign<ModNumC<N,M>> for ModNumC<N,M> {
+    fn add_assign(&mut self, rhs: ModNumC<N,M>) {
+        *self = *self + rhs.a();
+    }
+}
+
+impl <N:Integer+Copy+FromPrimitive, const M: usize> Neg for ModNumC<N,M> {
+    type Output = ModNumC<N,M>;
+
+    fn neg(self) -> Self::Output {
+        ModNumC::new(self.m() - self.num)
+    }
+}
+
+impl <N:Integer+Copy+FromPrimitive, const M: usize> Sub<N> for ModNumC<N,M> {
+    type Output = ModNumC<N,M>;
+
+    fn sub(self, rhs: N) -> Self::Output {
+        self + (-ModNumC::new(rhs))
+    }
+}
+
+impl <N:Integer+Copy+FromPrimitive, const M: usize> SubAssign<N> for ModNumC<N,M> {
+    fn sub_assign(&mut self, rhs: N) {
+        *self = *self - rhs;
+    }
+}
+
+impl <N:Integer+Copy+FromPrimitive, const M: usize> Sub<ModNumC<N,M>> for ModNumC<N,M> {
+    type Output = ModNumC<N,M>;
+
+    fn sub(self, rhs: ModNumC<N,M>) -> Self::Output {
+        self - rhs.a()
+    }
+}
+
+impl <N:Integer+Copy+FromPrimitive, const M: usize> SubAssign<ModNumC<N,M>> for ModNumC<N,M> {
+    fn sub_assign(&mut self, rhs: ModNumC<N,M>) {
+        *self += -rhs;
+    }
+}
+
+impl <N:Integer+Copy+FromPrimitive, const M: usize> Mul<N> for ModNumC<N,M> {
+    type Output = ModNumC<N,M>;
+
+    fn mul(self, rhs: N) -> Self::Output {
+        ModNumC::new(self.num * rhs)
+    }
+}
+
+impl <N:Integer+Copy+FromPrimitive, const M: usize> MulAssign<N> for ModNumC<N,M> {
+    fn mul_assign(&mut self, rhs: N) {
+        *self = *self * rhs;
+    }
+}
+
+impl <N:Integer+Copy+FromPrimitive, const M: usize> Mul<ModNumC<N,M>> for ModNumC<N,M> {
+    type Output = ModNumC<N,M>;
+
+    fn mul(self, rhs: ModNumC<N,M>) -> Self::Output {
+        self * rhs.a()
+    }
+}
+
+impl <N:Integer+Copy+FromPrimitive, const M: usize> MulAssign<ModNumC<N,M>> for ModNumC<N,M> {
+    fn mul_assign(&mut self, rhs: ModNumC<N,M>) {
+        *self = *self * rhs.a();
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -614,6 +737,29 @@ mod tests {
     fn test_sub() {
         for (n, m, sub, target) in vec![(1, 5, 2, 4)] {
             assert_eq!(ModNum::new(n, m) - sub, ModNum::new(target, m));
+        }
+    }
+
+    #[test]
+    fn test_neg_c() {
+        let m: ModNumC<i32,5> = ModNumC::new(-2);
+        assert_eq!(m, ModNumC::new(3));
+    }
+
+    #[test]
+    fn test_negation_c() {
+        let s: ModNumC<i32,5> = ModNumC::new(0);
+        for m in s.iter() {
+            let n = -m;
+            assert_eq!(m + n, 0);
+        }
+    }
+
+    #[test]
+    fn test_sub_c() {
+        for (n, sub, target) in vec![(1, 2, 4), (2, 1, 1), (4, 1, 3), (4, 4, 0), (2, 5, 2)] {
+            let n: ModNumC<i32,5> = ModNumC::new(n);
+            assert_eq!(n - sub, target);
         }
     }
 
