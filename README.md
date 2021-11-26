@@ -19,6 +19,10 @@ Note that `ModNum` and `ModNumC` are not designed to work with arbitrary-length 
 they require their integer type to implement the `Copy` trait.
 
 # Updates
+* **0.8.0**:
+  * Added the `with()` method.
+  * Updated `SaturatingAdd` and `SaturatingSub` documentation.
+  * Tested and updated for Rust 2021 edition.
 * **0.7.1**:
   * Added some more documentation tests for `ModNumC`.
 * **0.7**:
