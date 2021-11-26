@@ -1,19 +1,17 @@
-#![feature(const_generics)]
-#![allow(incomplete_features)]
 #![cfg_attr(not(test), no_std)]
 //! # Overview
 //! The bare_metal_modulo crate includes two structs:
-//! - ModNum is a highly ergonomic modular arithmetic struct intended for no_std use.
-//! - ModNumC is similar to ModNum, but uses [const generics](https://rust-lang.github.io/rfcs/2000-const-generics.html) to specify the modulo.
-//! - ModNumIterator is a double-ended iterator that starts with the ModNum upon which it is
-//!   invoked, making a complete traversal of the elements in that ModNum's ring.
+//! - `ModNum` is a highly ergonomic modular arithmetic struct intended for no_std use.
+//! - `ModNumC` is similar to ModNum, but uses [const generics](https://rust-lang.github.io/rfcs/2000-const-generics.html) to specify the modulo.
+//! - `ModNumIterator` is a double-ended iterator that starts with the `ModNum` upon which it is
+//!   invoked, making a complete traversal of the elements in that `ModNum`'s ring.
 //!
-//! ModNum objects represent a value modulo m. The value and modulo can be of any
+//! `ModNum` objects represent a value modulo m. The value and modulo can be of any
 //! primitive integer type.  Arithmetic operators include +, - (both unary and binary),
 //! *, /, pow(), and ==. Additional capabilities include computing multiplicative inverses
 //! and solving modular equations.
 //!
-//! ModNumC objects likewise represent a value modulo M, where M is a generic constant of the
+//! `ModNumC` objects likewise represent a value modulo M, where M is a generic constant of the
 //! usize type. Arithmetic operators include +, - (both unary and binary), *, and ==.
 //!
 //! This library was originally developed to facilitate bidirectional navigation through fixed-size
@@ -21,23 +19,23 @@
 //! traverses the entire ring starting at any desired value. The iterator supports both ModNum and
 //! ModNumC.
 //!
-//! Note that ModNum and ModNumC are not designed to work with arbitrary-length integers, as
-//! they require their integer type to implement the Copy trait.
+//! Note that `ModNum` and `ModNumC` are not designed to work with arbitrary-length integers, as
+//! they require their integer type to implement the `Copy` trait.
 //!
 //! For the [2020 Advent of Code](https://adventofcode.com/2020)
 //! ([Day 13](https://adventofcode.com/2020/day/13) part 2),
-//! I extended ModNum to solve systems of modular equations, provided that each modular equation
+//! I extended `ModNum` to solve systems of modular equations, provided that each modular equation
 //! is represented using signed integers. My implementation is based on this
 //! [lucid](https://byorgey.wordpress.com/2020/02/15/competitive-programming-in-haskell-modular-arithmetic-part-1/)
 //! [explanation](https://byorgey.wordpress.com/2020/03/03/competitive-programming-in-haskell-modular-arithmetic-part-2/)
 //! by [Brent Yorgey](http://ozark.hendrix.edu/~yorgey/).
 //!
 //! # Accessing Values
-//! Each ModNum/ModNumC represents an integer **a (mod m)**. To access these values, use the
+//! Each `ModNum`/`ModNumC` represents an integer **a (mod m)**. To access these values, use the
 //! corresponding **a()** and **m()** methods. Note that **a()** will always return a fully
 //! reduced value, regardless of how it was initialized.
 //!
-//! ```
+//!```
 //! use bare_metal_modulo::*;
 //!
 //! let m = ModNum::new(7, 10);
@@ -58,6 +56,15 @@
 //! // ModNumC variables indicate the modulo using a type annotation.
 //! let q: ModNumC<i32, 17> = ModNumC::new(23);
 //! assert_eq!(q, 6);
+//!
+//! // Create a new ModNum with the same modulo as an existing one.
+//! let r = p.with(8);
+//! assert_eq!(r.a(), 2);
+//! assert_eq!(r.m(), 3);
+//!
+//! let s = q.with(35);
+//! assert_eq!(s.a(), 1);
+//! assert_eq!(s.m(), 17);
 //! ```
 //!
 //! # Arithmetic
@@ -105,10 +112,19 @@
 //! let mut m: ModNumC<isize,5> = ModNumC::new(2);
 //! m *= 3;
 //! assert_eq!(m, ModNumC::new(1));
+//!
+//! m += 1;
+//! assert_eq!(m, ModNumC::new(2));
+//!
+//! m += 3;
+//! assert_eq!(m, ModNumC::new(0));
 //! ```
 //!
 //! Saturating addition and subtraction are often useful relative to the modulus, so the
-//! [`num::Saturating`](https://docs.rs/num/0.3.1/num/trait.Saturating.html) trait is implemented
+//! [`num::traits::SaturatingAdd`](https://docs.rs/num-traits/0.2.14/num_traits/ops/saturating/trait.SaturatingAdd.html)
+//! and
+//! [`num::traits::SaturatingSub`](https://docs.rs/num-traits/0.2.14/num_traits/ops/saturating/trait.SaturatingSub.html)
+//! traits are implemented
 //! as well.
 //!
 //! ```
@@ -182,8 +198,8 @@
 //! assert_eq!((m / ModNum::new(4, 11)).unwrap(), ModNum::new(7, 11));
 //! ```
 //!
-//! The **==** operator can be used to compare two ModNums, two ModNumCs or a ModNum/ModNumC and an
-//! integer of the corresponding type. In both cases, it represents congruence rather than
+//! The **==** operator can be used to compare two `ModNum`s, two `ModNumC`s or a `ModNum`/`ModNumC`
+//! and an integer of the corresponding type. In both cases, it represents congruence rather than
 //! strict equality.
 //!
 //! ```
@@ -203,7 +219,7 @@
 //! ```
 //!
 //! # Iteration
-//! I originally created ModNum to facilitate cyclic iteration through a fixed-size array from an
+//! I originally created `ModNum` to facilitate cyclic iteration through a fixed-size array from an
 //! arbitrary starting point in a no_std environment. Its double-ended iterator facilitates
 //! both forward and backward iteration.
 //!
@@ -228,7 +244,7 @@
 //! # Solving Modular Equations with the Chinese Remainder Theorem
 //! For the [2020 Advent of Code](https://adventofcode.com/2020)
 //! ([Day 13](https://adventofcode.com/2020/day/13) part 2),
-//! I extended ModNum to solve systems of modular equations, provided that each modular equation
+//! I extended `ModNum` to solve systems of modular equations, provided that each modular equation
 //! is represented using signed integers. My implementation is based on this
 //! [lucid](https://byorgey.wordpress.com/2020/02/15/competitive-programming-in-haskell-modular-arithmetic-part-1/)
 //! [explanation](https://byorgey.wordpress.com/2020/03/03/competitive-programming-in-haskell-modular-arithmetic-part-2/)
@@ -272,6 +288,7 @@ pub trait MNum : Copy + Eq + PartialEq {
     type Num: Integer + Copy;
     fn a(&self) -> Self::Num;
     fn m(&self) -> Self::Num;
+    fn with(&self, new_a: Self::Num) -> Self;
 }
 
 /// Represents an integer **a (mod m)**
@@ -290,6 +307,10 @@ impl <N:Integer+Copy> MNum for ModNum<N> {
 
     fn m(&self) -> N {
         self.modulo
+    }
+
+    fn with(&self, new_a: Self::Num) -> Self {
+        Self::new(new_a, self.m())
     }
 }
 
@@ -637,6 +658,10 @@ impl <N:Copy+Integer+FromPrimitive, const M: usize> MNum for ModNumC<N,M> {
 
     fn m(&self) -> Self::Num {
         N::from_usize(M).unwrap()
+    }
+
+    fn with(&self, new_a: Self::Num) -> Self {
+        Self::new(new_a)
     }
 }
 

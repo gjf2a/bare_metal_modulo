@@ -19,6 +19,8 @@ Note that `ModNum` and `ModNumC` are not designed to work with arbitrary-length 
 they require their integer type to implement the `Copy` trait.
 
 # Updates
+* **0.7.1**:
+  * Added some more documentation tests for `ModNumC`.
 * **0.7**:
   * Added `ModNumC`, which uses [const generics](https://rust-lang.github.io/rfcs/2000-const-generics.html)
     to enable compile-time checking of compatible modulo. Its functionality is a proper
