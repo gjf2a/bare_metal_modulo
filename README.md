@@ -19,6 +19,8 @@ Note that `ModNum` and `ModNumC` are not designed to work with arbitrary-length 
 they require their integer type to implement the `Copy` trait.
 
 # Updates
+* **0.9.0**:
+  * Added the `replace()` method.
 * **0.8.0**:
   * Added the `with()` method.
   * Updated `SaturatingAdd` and `SaturatingSub` documentation.
