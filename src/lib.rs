@@ -65,6 +65,15 @@
 //! let s = q.with(35);
 //! assert_eq!(s.a(), 1);
 //! assert_eq!(s.m(), 17);
+//!
+//! // Replace the value of the ModNum with a new value while keeping the modulo.
+//! let mut t = ModNum::new(3, 5);
+//! t.replace(12);
+//! assert_eq!(t.a(), 2);
+//!
+//! let mut v: ModNumC<usize,5> = ModNumC::new(3);
+//! v.replace(12);
+//! assert_eq!(v.a(), 2);
 //! ```
 //!
 //! # Arithmetic
@@ -289,6 +298,9 @@ pub trait MNum : Copy + Eq + PartialEq {
     fn a(&self) -> Self::Num;
     fn m(&self) -> Self::Num;
     fn with(&self, new_a: Self::Num) -> Self;
+    fn replace(&mut self, new_a: Self::Num) {
+        *self = self.with(new_a);
+    }
 }
 
 /// Represents an integer **a (mod m)**

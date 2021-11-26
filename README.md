@@ -1,6 +1,6 @@
 # Overview
 `ModNum` and `ModNumC` are highly ergonomic modular arithmetic structs intended 
-for no_std use.
+for `no_std` use.
 
 `ModNum` objects represent a value modulo m. The value and modulo can be of any
 primitive integer type.  Arithmetic operators include +, - (both unary and binary),
