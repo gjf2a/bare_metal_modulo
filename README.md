@@ -19,6 +19,8 @@ Note that `ModNum` and `ModNumC` are not designed to work with arbitrary-length 
 they require their integer type to implement the `Copy` trait.
 
 # Updates
+* **0.10.0**:
+  * Now implements `PartialOrd` with reference to generic integers.
 * **0.9.0**:
   * Added the `replace()` method.
 * **0.8.0**:

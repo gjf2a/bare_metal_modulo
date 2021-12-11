@@ -8,11 +8,12 @@
 //!
 //! `ModNum` objects represent a value modulo m. The value and modulo can be of any
 //! primitive integer type.  Arithmetic operators include +, - (both unary and binary),
-//! *, /, pow(), and ==. Additional capabilities include computing multiplicative inverses
-//! and solving modular equations.
+//! *, /, pow(), ==, <, >, <=, >=, and !=. Additional capabilities include computing multiplicative
+//! inverses and solving modular equations.
 //!
 //! `ModNumC` objects likewise represent a value modulo M, where M is a generic constant of the
-//! usize type. Arithmetic operators include +, - (both unary and binary), *, and ==.
+//! usize type. Arithmetic operators include +, - (both unary and binary), *, ==, <, >, <=, >=, and
+//! !=.
 //!
 //! This library was originally developed to facilitate bidirectional navigation through fixed-size
 //! arrays at arbitrary starting points. This is facilitated by a double-ended iterator that
@@ -211,6 +212,8 @@
 //! and an integer of the corresponding type. In both cases, it represents congruence rather than
 //! strict equality.
 //!
+//! Inequalities are also defined over those same sets.
+//!
 //! ```
 //! use bare_metal_modulo::*;
 //!
@@ -220,11 +223,29 @@
 //! assert!(m == -3);
 //! assert!(m != 3);
 //!
+//! assert!(m < 4);
+//! assert!(m < 8);
+//! assert!(m > 1);
+//!
+//! let n = ModNum::new(6, 5);
+//! assert!(m > n);
+//! assert!(n < 2);
+//! assert!(n > 0);
+//!
 //! let m: ModNumC<i32,5> = ModNumC::new(2);
 //! assert!(m == 2);
 //! assert!(m == 7);
 //! assert!(m == -3);
 //! assert!(m != 3);
+//!
+//! assert!(m < 4);
+//! assert!(m < 8);
+//! assert!(m > 1);
+//!
+//! let n: ModNumC<i32,5> = ModNumC::new(6);
+//! assert!(m > n);
+//! assert!(n < 2);
+//! assert!(n > 0);
 //! ```
 //!
 //! # Iteration
@@ -287,6 +308,7 @@
 //! let solution = ModNum::<i128>::chinese_remainder_system(&mut values);
 //! assert_eq!(solution.unwrap().a(), 762009420388013796);
 //! ```
+use core::cmp::Ordering;
 use core::mem;
 use num::{Integer, Signed, NumCast, FromPrimitive};
 use core::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Neg, Div, DivAssign};
@@ -416,6 +438,12 @@ impl <N: Integer + Signed + Copy + NumCast> ModNum<N> {
 impl <N:Integer+Copy> PartialEq<N> for ModNum<N> {
     fn eq(&self, other: &N) -> bool {
         self.num == other.mod_floor(&self.modulo)
+    }
+}
+
+impl <N:Integer+Copy> PartialOrd<N> for ModNum<N> {
+    fn partial_cmp(&self, other: &N) -> Option<Ordering> {
+        self.a().partial_cmp(other)
     }
 }
 
@@ -694,6 +722,12 @@ impl <N:Copy+Integer+FromPrimitive, const M: usize> ModNumC<N,M> {
 impl <N:Integer+Copy+FromPrimitive, const M: usize> PartialEq<N> for ModNumC<N,M> {
     fn eq(&self, other: &N) -> bool {
         *self == ModNumC::new(*other)
+    }
+}
+
+impl <N:Integer+Copy+FromPrimitive, const M: usize> PartialOrd<N> for ModNumC<N,M> {
+    fn partial_cmp(&self, other: &N) -> Option<Ordering> {
+        self.a().partial_cmp(other)
     }
 }
 
