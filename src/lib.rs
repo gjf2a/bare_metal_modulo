@@ -295,17 +295,17 @@
 //! use bare_metal_modulo::*;
 //!
 //! let mut values = (2..).zip((5..).step_by(2)).map(|(a, m)| ModNum::new(a, m)).take(3);
-//! let solution = ModNum::<i128>::chinese_remainder_system(&mut values);
+//! let solution = ModNum::<i128>::chinese_remainder_system(values);
 //! assert_eq!(solution.unwrap().a(), 157);
 //!
 //! let values = vec![ModNum::new(2, 5), ModNum::new(3, 7), ModNum::new(4, 9)];
-//! let solution = ModNum::<i128>::chinese_remainder_system(&mut values.iter().copied());
+//! let solution = ModNum::<i128>::chinese_remainder_system(values.iter().copied());
 //! assert_eq!(solution.unwrap().a(), 157);
 //!
 //!let mut values = [(0, 23), (28, 41), (20, 37), (398, 421), (11, 17), (15, 19), (6, 29),
 //!    (433, 487), (11, 13), (5, 137), (19, 49)]
 //!    .iter().copied().map(|(a, m)| ModNum::new(a, m));
-//! let solution = ModNum::<i128>::chinese_remainder_system(&mut values);
+//! let solution = ModNum::<i128>::chinese_remainder_system(values);
 //! assert_eq!(solution.unwrap().a(), 762009420388013796);
 //! ```
 use core::cmp::Ordering;
@@ -389,7 +389,7 @@ impl <N: Integer + Signed + Copy + NumCast> ModNum<N> {
     /// - Returns **Some(element)** if the iterator has only one element.
     /// - Returns **Some(solution)** if the iterator has two or more elements, where the solution is
     ///   found by repeatedly calling **ModNum::chinese_remainder()**.
-    pub fn chinese_remainder_system<I:Iterator<Item=ModNum<N>>>(modnums: &mut I) -> Option<ModNum<N>> {
+    pub fn chinese_remainder_system<I:Iterator<Item=ModNum<N>>>(mut modnums: I) -> Option<ModNum<N>> {
         modnums.next().map(|start_num|
             modnums.fold(start_num, |a, b| a.chinese_remainder(b)))
     }
