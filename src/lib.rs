@@ -271,6 +271,30 @@
 //! assert_eq!(reverse, vec![1, 0, 4, 3, 2]);
 //! ```
 //!
+//! # Hash/BTree keys
+//! `ModNum` and `ModNumC` objects implement the `Ord` and `Hash` traits, and therefore can serve
+//! as keys for hash tables and search trees.
+//!
+//! ```
+//! use bare_metal_modulo::*;
+//! use std::collections::HashSet;
+//!
+//! let m1: ModNumC<usize, 3> = ModNumC::new(2);
+//! let m2: ModNumC<usize, 3> = ModNumC::new(4);
+//! let m3: ModNumC<usize, 3> = ModNumC::new(5);
+//! assert_eq!(m1, m3);
+//! assert_eq!(m1 + 2, m2);
+//!
+//! let mut set = HashSet::new();
+//! set.insert(m1);
+//! set.insert(m2);
+//! set.insert(m3);
+//! assert_eq!(set.len(), 2);
+//! for m in [m1, m2, m3].iter() {
+//!     assert!(set.contains(m));
+//! }
+//! ```
+//!
 //! # Solving Modular Equations with the Chinese Remainder Theorem
 //! For the [2020 Advent of Code](https://adventofcode.com/2020)
 //! ([Day 13](https://adventofcode.com/2020/day/13) part 2),
@@ -326,7 +350,7 @@ pub trait MNum : Copy + Eq + PartialEq {
 }
 
 /// Represents an integer **a (mod m)**
-#[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd)]
+#[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd,Hash)]
 pub struct ModNum<N> {
     num: N,
     modulo: N
@@ -678,7 +702,7 @@ impl <N: Integer+Copy+Debug+Display> SaturatingSub for ModNum<N> {
 }
 
 /// Represents an integer **a (mod M)**
-#[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd)]
+#[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd,Hash)]
 pub struct ModNumC<N, const M: usize> {
     num: N
 }

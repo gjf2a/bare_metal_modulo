@@ -19,6 +19,8 @@ Note that `ModNum` and `ModNumC` are not designed to work with arbitrary-length 
 they require their integer type to implement the `Copy` trait.
 
 # Updates
+* **0.11.1**:
+  * `ModNum` and `ModNumC` now implement the `Hash` trait.
 * **0.11.0**:
   * Changed signature of the Chinese remainder solver to take ownership of the iterator upon which it operates.
 * **0.10.0**:
