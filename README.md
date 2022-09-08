@@ -19,6 +19,8 @@ Note that `ModNum` and `ModNumC` are not designed to work with arbitrary-length 
 they require their integer type to implement the `Copy` trait.
 
 # Updates
+* **0.11.2**:
+  * Upgraded `num` dependency to `0.4`.
 * **0.11.1**:
   * `ModNum` and `ModNumC` now implement the `Hash` trait.
 * **0.11.0**:
