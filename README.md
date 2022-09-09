@@ -3,12 +3,12 @@
 for `no_std` use.
 
 `ModNum` objects represent a value modulo m. The value and modulo can be of any
-primitive integer type.  Arithmetic operators include +, - (both unary and binary),
-*, /, `pow()`, and ==. Additional capabilities include computing multiplicative inverses
+primitive integer type.  Arithmetic operators include `+`, `-` (both unary and binary),
+`*`, `/`, `pow()`, and `==`. Additional capabilities include computing multiplicative inverses
 and solving modular equations. 
 
-`ModNumC` objects likewise represent a value modulo M, where M is a generic constant of the
-`usize` type. Arithmetic operators include +, - (both unary and binary), *, and ==.
+`ModNumC` objects likewise represent a value modulo `M`, where `M` is a generic constant of the
+`usize` type. Arithmetic operators include `+`, `-` (both unary and binary), `*`, and `==`.
 
 This library was originally developed to facilitate bidirectional navigation through fixed-size
 arrays at arbitrary starting points. This is facilitated by a double-ended iterator that
@@ -19,6 +19,8 @@ Note that `ModNum` and `ModNumC` are not designed to work with arbitrary-length 
 they require their integer type to implement the `Copy` trait.
 
 # Updates
+* **0.11.3**: 
+  * Updated a doctest and edited some documentation.
 * **0.11.2**:
   * Upgraded `num` dependency to `0.4`.
 * **0.11.1**:
@@ -26,7 +28,7 @@ they require their integer type to implement the `Copy` trait.
 * **0.11.0**:
   * Changed signature of the Chinese remainder solver to take ownership of the iterator upon which it operates.
 * **0.10.0**:
-  * Now implements `PartialOrd` with reference to generic integers.
+  * `ModNum` and `ModNumC` now implement `PartialOrd` with reference to generic integers.
 * **0.9.0**:
   * Added the `replace()` method.
 * **0.8.0**:

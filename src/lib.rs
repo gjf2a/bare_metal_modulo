@@ -7,18 +7,18 @@
 //!   invoked, making a complete traversal of the elements in that `ModNum`'s ring.
 //!
 //! `ModNum` objects represent a value modulo m. The value and modulo can be of any
-//! primitive integer type.  Arithmetic operators include +, - (both unary and binary),
-//! *, /, pow(), ==, <, >, <=, >=, and !=. Additional capabilities include computing multiplicative
-//! inverses and solving modular equations.
+//! primitive integer type.  Arithmetic operators include `+`, `-` (both unary and binary),
+//! `*`, `/`, `pow()`, `==`, `<`, `>`, `<=`, `>=`, and `!=`. Additional capabilities include
+//! computing multiplicative inverses and solving modular equations.
 //!
 //! `ModNumC` objects likewise represent a value modulo M, where M is a generic constant of the
-//! usize type. Arithmetic operators include +, - (both unary and binary), *, ==, <, >, <=, >=, and
-//! !=.
+//! usize type. Arithmetic operators include `+`, `-` (both unary and binary), `*`, `==`, `<`,
+//! `>`, `<=`, `>=`, and `!=`.
 //!
 //! This library was originally developed to facilitate bidirectional navigation through fixed-size
 //! arrays at arbitrary starting points. This is facilitated by a double-ended iterator that
-//! traverses the entire ring starting at any desired value. The iterator supports both ModNum and
-//! ModNumC.
+//! traverses the entire ring starting at any desired value. The iterator supports both
+//! `ModNum` and `ModNumC`.
 //!
 //! Note that `ModNum` and `ModNumC` are not designed to work with arbitrary-length integers, as
 //! they require their integer type to implement the `Copy` trait.
@@ -272,8 +272,9 @@
 //! ```
 //!
 //! # Hash/BTree keys
-//! `ModNum` and `ModNumC` objects implement the `Ord` and `Hash` traits, and therefore can serve
-//! as keys for hash tables and search trees.
+//! `ModNum` and `ModNumC` objects implement the `Ord` and `Hash` traits, and therefore can
+//! be included in `HashSet` and `BTreeSet` collections and serve
+//! as keys for `HashMap` and `BTreeMap` dictionaries.
 //!
 //! ```
 //! use bare_metal_modulo::*;
@@ -288,7 +289,6 @@
 //! let mut set = HashSet::new();
 //! set.insert(m1);
 //! set.insert(m2);
-//! set.insert(m3);
 //! assert_eq!(set.len(), 2);
 //! for m in [m1, m2, m3].iter() {
 //!     assert!(set.contains(m));
