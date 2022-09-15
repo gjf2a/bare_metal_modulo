@@ -382,6 +382,47 @@ pub trait MNum : Copy + Eq + PartialEq {
         let (g, _, inv) = Self::egcd(self.m(), self.a());
         if g == Self::Num::one() {Some(self.with(inv))} else {None}
     }
+
+    fn do_add(self, rhs: Self::Num) -> Self {
+        self.with(self.a() + rhs)
+    }
+
+    fn do_mul(self, rhs: Self::Num) -> Self {
+        self.with(self.a() * rhs)
+    }
+
+    fn do_div(self, rhs: Self::Num) -> Option<Self> where Self::Num: Signed {
+        self.with(rhs).inverse().map(|inv| self.do_mul(inv.a()))
+    }
+
+    /// Returns a^rhs (mod m), for rhs >= 0.
+    /// Implements efficient modular exponentiation by [repeated squaring](https://byorgey.wordpress.com/2020/02/15/competitive-programming-in-haskell-modular-arithmetic-part-1/).
+    ///
+    /// Panics if rhs < 0. If negative exponents are possible, use .pow_signed()
+    fn do_pow(self, rhs: Self::Num) -> Self {
+        if rhs < Self::Num::zero() {
+            panic!("Negative exponentiation undefined for ModNum.pow(). Try .pow_signed() instead.")
+        } else if rhs == Self::Num::zero() {
+            self.with(Self::Num::one())
+        } else {
+            let r = self.do_pow(rhs.div_floor(&(Self::Num::one() + Self::Num::one())));
+            let mut sq = r.do_mul(r.a());
+            if rhs.is_odd() {
+                sq = sq.do_mul(self.a());
+            }
+            sq
+        }
+    }
+
+    /// Returns Some(a^rhs (mod m)). Handles negative exponents correctly, unlike .pow().
+    /// Returns None if the inverse is undefined.
+    fn pow_signed(&self, rhs: Self::Num) -> Option<Self> where Self::Num: Signed {
+        if rhs < Self::Num::zero() {
+            self.do_pow(-rhs).inverse()
+        } else {
+            Some(self.do_pow(rhs))
+        }
+    }
 }
 
 /// Represents an integer **a (mod m)**
@@ -452,16 +493,6 @@ impl <N: Integer + Signed + Copy + NumCast + Debug> ModNum<N> {
         modnums.next().map(|start_num|
             modnums.fold(start_num, |a, b| a.chinese_remainder(b)))
     }
-
-    /// Returns Some(a^rhs (mod m)). Handles negative exponents correctly, unlike .pow().
-    /// Returns None if the inverse is undefined.
-    pub fn pow_signed(&self, rhs: N) -> Option<ModNum<N>> {
-        if rhs < N::zero() {
-            self.pow(-rhs).inverse()
-        } else {
-            Some(self.pow(rhs))
-        }
-    }
 }
 
 /// Returns **true** if **other** is congruent to **self.a() (mod self.m())**
@@ -481,7 +512,7 @@ impl <N:Integer+Copy+Debug> Add<N> for ModNum<N> {
     type Output = Self;
 
     fn add(self, rhs: N) -> Self::Output {
-        self.with(self.num + rhs)
+        self.do_add(rhs)
     }
 }
 
@@ -549,7 +580,7 @@ impl <N:Integer+Copy+Debug> Mul<N> for ModNum<N> {
     type Output = ModNum<N>;
 
     fn mul(self, rhs: N) -> Self::Output {
-        self.with(self.num * rhs)
+        self.do_mul(rhs)
     }
 }
 
@@ -579,7 +610,7 @@ impl <N:Integer+Copy+Signed+NumCast+Debug> Div<N> for ModNum<N> {
     type Output = Option<ModNum<N>>;
 
     fn div(self, rhs: N) -> Self::Output {
-        self.with(rhs).inverse().map(|inv| self * inv.a())
+        self.do_div(rhs)
     }
 }
 
@@ -619,18 +650,7 @@ impl <N:Integer+Copy+NumCast+Debug> Pow<N> for ModNum<N> {
     ///
     /// Panics if rhs < 0. If negative exponents are possible, use .pow_signed()
     fn pow(self, rhs: N) -> Self::Output {
-        if rhs < N::zero() {
-            panic!("Negative exponentiation undefined for ModNum.pow(). Try .pow_signed() instead.")
-        } else if rhs == N::zero() {
-            self.with(N::one())
-        } else {
-            let r = self.pow(rhs.div_floor(&(N::from(2).unwrap())));
-            let mut sq = r * r.a();
-            if rhs.is_odd() {
-                sq *= self.a();
-            }
-            sq
-        }
+        self.do_pow(rhs)
     }
 }
 
@@ -709,11 +729,11 @@ impl <N: Integer+Copy+Debug+Display> SaturatingSub for ModNum<N> {
 
 /// Represents an integer **a (mod M)**
 #[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd,Hash)]
-pub struct ModNumC<N, const M: usize> {
+pub struct ModNumC<N: FromPrimitive, const M: usize> {
     num: N
 }
 
-impl <N:Display, const M: usize> Display for ModNumC<N,M> {
+impl <N:Display+FromPrimitive, const M: usize> Display for ModNumC<N,M> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{} (mod {})", self.num, M)
     }
@@ -765,7 +785,7 @@ impl <N:Integer+Copy+FromPrimitive+Debug, const M: usize> Add<N> for ModNumC<N,M
     type Output = ModNumC<N,M>;
 
     fn add(self, rhs: N) -> Self::Output {
-        self.with(self.num + rhs)
+        self.do_add(rhs)
     }
 }
 
@@ -829,7 +849,7 @@ impl <N:Integer+Copy+FromPrimitive+Debug, const M: usize> Mul<N> for ModNumC<N,M
     type Output = ModNumC<N,M>;
 
     fn mul(self, rhs: N) -> Self::Output {
-        self.with(self.num * rhs)
+        self.do_mul(rhs)
     }
 }
 
@@ -853,6 +873,41 @@ impl <N:Integer+Copy+FromPrimitive+Debug, const M: usize> MulAssign<ModNumC<N,M>
     }
 }
 
+impl <N:Integer+Copy+Signed+FromPrimitive+Debug, const M: usize> Div<N> for ModNumC<N,M> {
+    type Output = Option<Self>;
+
+    fn div(self, rhs: N) -> Self::Output {
+        self.do_div(rhs)
+    }
+}
+
+impl <N:Integer+Copy+Signed+FromPrimitive+Debug, const M: usize> DivAssign<N> for ModNumC<N,M> {
+
+    /// Performs division in place.
+    /// Panics if the quotient is undefined.
+    fn div_assign(&mut self, rhs: N) {
+        *self = (*self / rhs).unwrap();
+    }
+}
+
+impl <N:Integer+Copy+Signed+FromPrimitive+Debug, const M: usize> Div<ModNumC<N,M>> for ModNumC<N,M> {
+    type Output = Option<Self>;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        self / rhs.a()
+    }
+}
+
+impl <N:Integer+Copy+Signed+FromPrimitive+Debug, const M: usize> DivAssign<ModNumC<N,M>> for ModNumC<N,M> {
+
+    /// Performs division in place.
+    /// Panics if the quotient is undefined.
+    fn div_assign(&mut self, rhs: Self) {
+        *self = (*self / rhs.a()).unwrap();
+    }
+}
+
+
 impl <N: Integer+Copy+FromPrimitive+Debug, const M: usize> SaturatingAdd for ModNumC<N,M> {
     fn saturating_add(&self, v: &Self) -> Self {
         if self.a() + v.a() >= self.m() {
@@ -870,6 +925,18 @@ impl <N: Integer+Copy+FromPrimitive+Debug, const M: usize> SaturatingSub for Mod
         } else {
             *self - *v
         }
+    }
+}
+
+impl <N:Integer+Copy+NumCast+Debug+FromPrimitive, const M: usize> Pow<N> for ModNumC<N,M> {
+    type Output = ModNumC<N,M>;
+
+    /// Returns a^rhs (mod m), for rhs >= 0.
+    /// Implements efficient modular exponentiation by [repeated squaring](https://byorgey.wordpress.com/2020/02/15/competitive-programming-in-haskell-modular-arithmetic-part-1/).
+    ///
+    /// Panics if rhs < 0. If negative exponents are possible, use .pow_signed()
+    fn pow(self, rhs: N) -> Self::Output {
+        self.do_pow(rhs)
     }
 }
 
