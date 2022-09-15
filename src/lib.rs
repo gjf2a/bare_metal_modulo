@@ -336,18 +336,51 @@
 //! ```
 use core::cmp::Ordering;
 use core::mem;
-use num::{Integer, Signed, NumCast, FromPrimitive};
+use num::{Integer, Signed, NumCast, FromPrimitive, Zero, One};
 use core::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Neg, Div, DivAssign};
 use num::traits::{Pow, SaturatingAdd, SaturatingSub};
 use core::fmt::{Debug, Display, Formatter};
 
 pub trait MNum : Copy + Eq + PartialEq {
     type Num: Integer + Copy;
+
     fn a(&self) -> Self::Num;
+
     fn m(&self) -> Self::Num;
+
     fn with(&self, new_a: Self::Num) -> Self;
+
     fn replace(&mut self, new_a: Self::Num) {
         *self = self.with(new_a);
+    }
+
+    /// [Extended Euclidean Algorithm for Greatest Common Divisor](https://byorgey.wordpress.com/2020/02/15/competitive-programming-in-haskell-modular-arithmetic-part-1/) for GCD.
+    ///
+    /// This is my translation into Rust of [Brent Yorgey's Haskell implementation](https://byorgey.wordpress.com/2020/02/15/competitive-programming-in-haskell-modular-arithmetic-part-1/).
+    ///
+    /// Given two integers **a** and **b**, it returns three integer values:
+    /// - Greatest Common Divisor (**g**) of **a** and **b**
+    /// - Two additional values **x** and **y**, where **ax + by = g**
+    fn egcd(a: Self::Num, b: Self::Num) -> (Self::Num,Self::Num,Self::Num) where Self::Num: Signed {
+        if b == Self::Num::zero() {
+            (a.signum() * a, a.signum(), Self::Num::zero())
+        } else {
+            let (g, x, y) = Self::egcd(b, a.mod_floor(&b));
+            (g, y, x - (a / b) * y)
+        }
+    }
+
+    /// Returns the modular inverse, if it exists. Returns **None** if it does not exist.
+    ///
+    /// This is my translation into Rust of [Brent Yorgey's Haskell implementation](https://byorgey.wordpress.com/2020/02/15/competitive-programming-in-haskell-modular-arithmetic-part-1/).
+    ///
+    /// Let **m = ModNum::new(a, m)**, where **a** and **m** are relatively prime.
+    /// Then **m * m.inverse().unwrap().a()** is congruent to **1 (mod m)**.
+    ///
+    /// Returns None if **a** and **m** are not relatively prime.
+    fn inverse(&self) -> Option<Self> where Self::Num: Signed {
+        let (g, _, inv) = Self::egcd(self.m(), self.a());
+        if g == Self::Num::one() {Some(self.with(inv))} else {None}
     }
 }
 
@@ -418,35 +451,6 @@ impl <N: Integer + Signed + Copy + NumCast> ModNum<N> {
     pub fn chinese_remainder_system<I:Iterator<Item=ModNum<N>>>(mut modnums: I) -> Option<ModNum<N>> {
         modnums.next().map(|start_num|
             modnums.fold(start_num, |a, b| a.chinese_remainder(b)))
-    }
-
-    /// [Extended Euclidean Algorithm for Greatest Common Divisor](https://byorgey.wordpress.com/2020/02/15/competitive-programming-in-haskell-modular-arithmetic-part-1/) for GCD.
-    ///
-    /// This is my translation into Rust of [Brent Yorgey's Haskell implementation](https://byorgey.wordpress.com/2020/02/15/competitive-programming-in-haskell-modular-arithmetic-part-1/).
-    ///
-    /// Given two integers **a** and **b**, it returns three integer values:
-    /// - Greatest Common Divisor (**g**) of **a** and **b**
-    /// - Two additional values **x** and **y**, where **ax + by = g**
-    pub fn egcd(a: N, b: N) -> (N,N,N) {
-        if b == N::zero() {
-            (a.signum() * a, a.signum(), N::zero())
-        } else {
-            let (g, x, y) = ModNum::egcd(b, a.mod_floor(&b));
-            (g, y, x - (a / b) * y)
-        }
-    }
-
-    /// Returns the modular inverse, if it exists. Returns **None** if it does not exist.
-    ///
-    /// This is my translation into Rust of [Brent Yorgey's Haskell implementation](https://byorgey.wordpress.com/2020/02/15/competitive-programming-in-haskell-modular-arithmetic-part-1/).
-    ///
-    /// Let **m = ModNum::new(a, m)**, where **a** and **m** are relatively prime.
-    /// Then **m * m.inverse().unwrap().a()** is congruent to **1 (mod m)**.
-    ///
-    /// Returns None if **a** and **m** are not relatively prime.
-    pub fn inverse(&self) -> Option<ModNum<N>> {
-        let (g, _, inv) = ModNum::<N>::egcd(self.m(), self.a());
-        if g == N::one() {Some(ModNum::new(inv, self.m()))} else {None}
     }
 
     /// Returns Some(a^rhs (mod m)). Handles negative exponents correctly, unlike .pow().
