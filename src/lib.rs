@@ -14,8 +14,7 @@
 //! computing multiplicative inverses and solving modular equations.
 //!
 //! `ModNumC` objects likewise represent a value modulo **M**, where **M** is a generic constant of
-//! the `usize` type. Arithmetic operators include `+`, `-` (both unary and binary), `*`, `==`, `<`,
-//! `>`, `<=`, `>=`, and `!=`.
+//! the `usize` type. `ModNumC` objects support the same arithmetic operators as `ModNum` objects.
 //!
 //! This library was originally developed to facilitate bidirectional navigation through fixed-size
 //! arrays at arbitrary starting points. This is facilitated by a double-ended iterator that
@@ -208,6 +207,21 @@
 //!
 //! assert_eq!((m / ModNum::new(2, 11)).unwrap(), ModNum::new(3, 11));
 //! assert_eq!((m / ModNum::new(4, 11)).unwrap(), ModNum::new(7, 11));
+//!
+//! let m: ModNumC<i32,5> = ModNumC::new(2);
+//!
+//! let i = m.inverse().unwrap();
+//! assert_eq!(m * i.a(), 1);
+//!
+//! assert_eq!(m.pow(2), ModNumC::new(4));
+//! assert_eq!(m.pow(3), ModNumC::new(3));
+//! assert_eq!(m.pow_signed(-2).unwrap(), ModNumC::new(4));
+//! assert_eq!(m.pow_signed(-3).unwrap(), ModNumC::new(2));
+//!
+//! let m: ModNumC<i32, 11> = ModNumC::new(6);
+//! assert_eq!((m / 2).unwrap().a(), 3);
+//! assert_eq!((m / 4).unwrap().a(), 7);
+//! assert_eq!(m / 0, None);
 //! ```
 //!
 //! The **==** operator can be used to compare two `ModNum`s, two `ModNumC`s or a `ModNum`/`ModNumC`
