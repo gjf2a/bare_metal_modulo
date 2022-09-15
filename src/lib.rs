@@ -1,18 +1,20 @@
 #![cfg_attr(not(test), no_std)]
 //! # Overview
-//! The bare_metal_modulo crate includes two structs:
-//! - `ModNum` is a highly ergonomic modular arithmetic struct intended for no_std use.
-//! - `ModNumC` is similar to ModNum, but uses [const generics](https://rust-lang.github.io/rfcs/2000-const-generics.html) to specify the modulo.
-//! - `ModNumIterator` is a double-ended iterator that starts with the `ModNum` upon which it is
-//!   invoked, making a complete traversal of the elements in that `ModNum`'s ring.
+//! The bare_metal_modulo crate includes the following structs:
+//! - `ModNum` is a highly ergonomic modular arithmetic struct intended for `no_std` use.
+//! - `ModNumC` is similar to `ModNum`, but uses
+//!   [const generics](https://rust-lang.github.io/rfcs/2000-const-generics.html) to specify the
+//!   modulo.
+//! - `ModNumIterator` is a double-ended iterator that starts with the `ModNum` or `ModNumC` upon
+//!   which it is invoked, making a complete traversal of the elements in that object's ring.
 //!
-//! `ModNum` objects represent a value modulo m. The value and modulo can be of any
+//! `ModNum` objects represent a value modulo **m**. The value and modulo can be of any
 //! primitive integer type.  Arithmetic operators include `+`, `-` (both unary and binary),
 //! `*`, `/`, `pow()`, `==`, `<`, `>`, `<=`, `>=`, and `!=`. Additional capabilities include
 //! computing multiplicative inverses and solving modular equations.
 //!
-//! `ModNumC` objects likewise represent a value modulo M, where M is a generic constant of the
-//! usize type. Arithmetic operators include `+`, `-` (both unary and binary), `*`, `==`, `<`,
+//! `ModNumC` objects likewise represent a value modulo **M**, where **M** is a generic constant of
+//! the `usize` type. Arithmetic operators include `+`, `-` (both unary and binary), `*`, `==`, `<`,
 //! `>`, `<=`, `>=`, and `!=`.
 //!
 //! This library was originally developed to facilitate bidirectional navigation through fixed-size
@@ -80,8 +82,8 @@
 //! # Arithmetic
 //! Addition, subtraction, and multiplication are all fully supported for both
 //! signed and unsigned integer types. The right-hand side may either be an integer of the
-//! corresponding type or another ModNum. In the latter case, if the modulo values differ
-//! it will **panic**. For a ModNumC, there is no risk of a panic, as any disparity will be
+//! corresponding type or another `ModNum`. In the latter case, if the modulo values differ
+//! it will **panic**. For a `ModNumC`, there is no risk of a panic, as any disparity will be
 //! flagged at compile time.
 //!
 //! Unary negation is supported for both signed and unsigned integers.
@@ -304,10 +306,10 @@
 //! [explanation](https://byorgey.wordpress.com/2020/03/03/competitive-programming-in-haskell-modular-arithmetic-part-2/)
 //! by [Brent Yorgey](http://ozark.hendrix.edu/~yorgey/).
 //!
-//! The solver works directly with an iterator containing the ModNum objects corresponding to the
+//! The solver works directly with an iterator containing the `ModNum` objects corresponding to the
 //! modular equations to be solved, facilitating space-efficient solutions of a sequence coming
 //! from a stream. The examples below show two variants of the same system. The first example uses
-//! an iterator, and the second example retrieves the system from a Vec.
+//! an iterator, and the second example retrieves the system from a `Vec`.
 //!
 //! Note that the solution value can rapidly become large, as shown in the third example. I
 //! recommend using **i128**, so as to maximize the set of solvable equations given this library's
@@ -396,9 +398,9 @@ impl <N: Integer + Signed + Copy + NumCast> ModNum<N> {
     ///
     /// This is my translation into Rust of [Brent Yorgey's Haskell implementation](https://byorgey.wordpress.com/2020/03/03/competitive-programming-in-haskell-modular-arithmetic-part-2/).
     ///
-    /// - self represents the modular equation **x = a (mod m)**
-    /// - other represents the modular equation **x = b (mod n)**
-    /// - It returns a ModNum corresponding to the equation **x = c (mod mn)** where
+    /// - `self` represents the modular equation **x = a (mod m)**
+    /// - `other` represents the modular equation **x = b (mod n)**
+    /// - It returns a `ModNum` corresponding to the equation **x = c (mod mn)** where
     ///   **c** is congruent both to **a (mod m)** and **b (mod n)**
     pub fn chinese_remainder(&self, other: ModNum<N>) -> ModNum<N> {
         let (g, u, v) = ModNum::egcd(self.modulo, other.modulo);
@@ -406,7 +408,7 @@ impl <N: Integer + Signed + Copy + NumCast> ModNum<N> {
         ModNum::new(c, self.modulo * other.modulo)
     }
 
-    /// Solves a system of modular equations using ModMum::chinese_remainder().
+    /// Solves a system of modular equations using `ModMum::chinese_remainder()`.
     ///
     /// Each equation in the system is an element of the **modnums** iterator parameter.
     /// - Returns **None** if the iterator is empty.
