@@ -349,6 +349,8 @@
 //! assert_eq!(solution.unwrap().a(), 762009420388013796);
 //! ```
 
+extern crate alloc;
+
 use core::cmp::Ordering;
 use core::mem;
 use num::{Integer, Signed, NumCast, FromPrimitive, Zero, One};
@@ -362,7 +364,7 @@ trait_set! {
 }
 
 pub trait MNum : Copy + Eq + PartialEq {
-    type Num: Integer + Copy;
+    type Num: NumType;
 
     fn a(&self) -> Self::Num;
 
@@ -450,9 +452,9 @@ impl <N: NumType + Signed> ModNum<N> {
     /// - It returns a `ModNum` corresponding to the equation **x = c (mod mn)** where
     ///   **c** is congruent both to **a (mod m)** and **b (mod n)**
     pub fn chinese_remainder(&self, other: ModNum<N>) -> ModNum<N> {
-        let (g, u, v) = ModNum::egcd(self.modulo, other.modulo);
-        let c = (self.num * other.modulo * v + other.num * self.modulo * u).div_floor(&g);
-        ModNum::new(c, self.modulo * other.modulo)
+        let (g, u, v) = ModNum::egcd(self.m(), other.m());
+        let c = (self.a() * other.m() * v + other.a() * self.m() * u).div_floor(&g);
+        ModNum::new(c, self.m() * other.m())
     }
 
     /// Solves a system of modular equations using `ModMum::chinese_remainder()`.
@@ -765,6 +767,7 @@ derive_modulo_arithmetic! {
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
     use super::*;
 
     #[test]
