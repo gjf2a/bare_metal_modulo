@@ -487,9 +487,18 @@ impl <N:NumType> PartialOrd<N> for ModNum<N> {
     }
 }
 
+macro_rules! try_match_type {
+    ($name:ty {$($generic:tt)*}) => ()
+}
+
+try_match_type! {
+    ModNum<N>
+    {const M: usize}
+}
+
 macro_rules! add_arithmetic {
-    ($name:ty) => {
-        impl <N:NumType> Add<N> for $name {
+    ($name:ty {$($generic:tt)*}) => {
+        impl <N: NumType,$($generic)*> Add<N> for $name {
             type Output = Self;
 
             fn add(self, rhs: N) -> Self::Output {
@@ -497,13 +506,13 @@ macro_rules! add_arithmetic {
             }
         }
 
-        impl <N:NumType> AddAssign<N> for $name {
+        impl <N: NumType,$($generic)*> AddAssign<N> for $name {
             fn add_assign(&mut self, rhs: N) {
                 *self = *self + rhs;
             }
         }
 
-        impl <N:NumType> Add<$name> for $name {
+        impl <N: NumType,$($generic)*> Add<$name> for $name {
             type Output = Self;
 
             fn add(self, rhs: Self) -> Self::Output {
@@ -512,7 +521,7 @@ macro_rules! add_arithmetic {
             }
         }
 
-        impl <N: NumType> AddAssign<$name> for $name {
+        impl <N: NumType,$($generic)*> AddAssign<$name> for $name {
             fn add_assign(&mut self, rhs: Self) {
                 assert_eq!(self.m(), rhs.m());
                 *self = *self + rhs.a();
@@ -520,15 +529,15 @@ macro_rules! add_arithmetic {
         }
 
 
-        impl <N:NumType> Neg for $name {
+        impl <N: NumType,$($generic)*> Neg for $name {
             type Output = Self;
 
             fn neg(self) -> Self::Output {
-                self.with(self.modulo - self.num)
+                self.with(self.m() - self.num)
             }
         }
 
-        impl <N:NumType> Sub<N> for $name {
+        impl <N: NumType,$($generic)*> Sub<N> for $name {
             type Output = Self;
 
             fn sub(self, rhs: N) -> Self::Output {
@@ -536,13 +545,13 @@ macro_rules! add_arithmetic {
             }
         }
 
-        impl <N:NumType> SubAssign<N> for $name {
+        impl <N: NumType,$($generic)*> SubAssign<N> for $name {
             fn sub_assign(&mut self, rhs: N) {
                 *self = *self - rhs;
             }
         }
 
-        impl <N:NumType> Sub<$name> for $name {
+        impl <N: NumType,$($generic)*> Sub<$name> for $name {
             type Output = Self;
 
             fn sub(self, rhs: Self) -> Self::Output {
@@ -551,14 +560,14 @@ macro_rules! add_arithmetic {
             }
         }
 
-        impl <N:NumType> SubAssign<$name> for $name {
+        impl <N: NumType,$($generic)*> SubAssign<$name> for $name {
             fn sub_assign(&mut self, rhs: Self) {
                 assert_eq!(self.m(), rhs.m());
                 *self += -rhs;
             }
         }
 
-        impl <N:NumType> Mul<N> for $name {
+        impl <N: NumType,$($generic)*> Mul<N> for $name {
             type Output = Self;
 
             fn mul(self, rhs: N) -> Self::Output {
@@ -566,13 +575,13 @@ macro_rules! add_arithmetic {
             }
         }
 
-        impl <N:NumType> MulAssign<N> for $name {
+        impl <N: NumType,$($generic)*> MulAssign<N> for $name {
             fn mul_assign(&mut self, rhs: N) {
                 *self = *self * rhs;
             }
         }
 
-        impl <N:NumType> Mul<$name> for $name {
+        impl <N: NumType,$($generic)*> Mul<$name> for $name {
             type Output = Self;
 
             fn mul(self, rhs: Self) -> Self::Output {
@@ -581,14 +590,14 @@ macro_rules! add_arithmetic {
             }
         }
 
-        impl <N:NumType> MulAssign<$name> for $name {
+        impl <N: NumType,$($generic)*> MulAssign<$name> for $name {
             fn mul_assign(&mut self, rhs: Self) {
                 assert_eq!(self.m(), rhs.m());
                 *self = *self * rhs.a();
             }
         }
 
-        impl <N: NumType + Signed> Div<N> for $name {
+        impl <N: NumType + Signed,$($generic)*> Div<N> for $name {
             type Output = Option<Self>;
 
             fn div(self, rhs: N) -> Self::Output {
@@ -596,7 +605,7 @@ macro_rules! add_arithmetic {
             }
         }
 
-        impl <N: NumType + Signed> DivAssign<N> for $name {
+        impl <N: NumType + Signed,$($generic)*> DivAssign<N> for $name {
 
             /// Performs division in place.
             /// Panics if the quotient is undefined.
@@ -605,7 +614,7 @@ macro_rules! add_arithmetic {
             }
         }
 
-        impl <N: NumType + Signed> Div<$name> for $name {
+        impl <N: NumType + Signed,$($generic)*> Div<$name> for $name {
             type Output = Option<Self>;
 
             fn div(self, rhs: Self) -> Self::Output {
@@ -614,7 +623,7 @@ macro_rules! add_arithmetic {
             }
         }
 
-        impl <N: NumType + Signed> DivAssign<$name> for $name {
+        impl <N: NumType + Signed,$($generic)*> DivAssign<$name> for $name {
 
             /// Performs division in place.
             /// Panics if the quotient is undefined.
@@ -624,7 +633,7 @@ macro_rules! add_arithmetic {
             }
         }
 
-        impl <N: NumType> Pow<N> for $name {
+        impl <N: NumType,$($generic)*> Pow<N> for $name {
             type Output = Self;
 
             /// Returns a^rhs (mod m), for rhs >= 0.
@@ -637,17 +646,17 @@ macro_rules! add_arithmetic {
                 } else if rhs == N::zero() {
                     self.with(N::one())
                 } else {
-                    let r = self.do_pow(rhs.div_floor(&(N::one() + N::one())));
-                    let mut sq = r.do_mul(r.a());
+                    let r = self.pow(rhs.div_floor(&(N::one() + N::one())));
+                    let mut sq = r * r;
                     if rhs.is_odd() {
-                        sq = sq.do_mul(self.a());
+                        sq = sq * self;
                     }
                     sq
                 }
             }
         }
 
-        impl <N: NumType> Pow<$name> for $name {
+        impl <N: NumType,$($generic)*> Pow<$name> for $name {
             type Output = Self;
 
             fn pow(self, rhs: Self) -> Self::Output {
@@ -656,19 +665,22 @@ macro_rules! add_arithmetic {
             }
         }
 
-        impl <N: NumType + Signed> $name {
-            fn pow_signed(&self, rhs: N) -> Option<Self> {
+        impl <N: NumType + Signed,$($generic)*> $name {
+            pub fn pow_signed(&self, rhs: N) -> Option<Self> {
                 if rhs < N::zero() {
                     self.pow(-rhs).inverse()
                 } else {
-                    Some(self.do_pow(rhs))
+                    Some(self.pow(rhs))
                 }
             }
         }
     }
 }
 
-add_arithmetic!(ModNum<N>);
+add_arithmetic! {
+    ModNum<N>
+    {}
+}
 
 /// A double-ended iterator that starts with the ModNum upon which it is invoked,
 /// making a complete traversal of the elements in that ModNum's ring.
@@ -788,132 +800,11 @@ impl <N: NumType, const M: usize> PartialOrd<N> for ModNumC<N,M> {
     }
 }
 
-impl <N: NumType, const M: usize> Add<N> for ModNumC<N,M> {
-    type Output = ModNumC<N,M>;
 
-    fn add(self, rhs: N) -> Self::Output {
-        self.do_add(rhs)
-    }
+add_arithmetic! {
+    ModNumC<N,M>
+    {const M: usize}
 }
-
-impl <N: NumType, const M: usize> AddAssign<N> for ModNumC<N,M> {
-    fn add_assign(&mut self, rhs: N) {
-        *self = *self + rhs;
-    }
-}
-
-impl <N: NumType, const M: usize> Add<ModNumC<N,M>> for ModNumC<N,M> {
-    type Output = ModNumC<N,M>;
-
-    fn add(self, rhs: ModNumC<N,M>) -> Self::Output {
-        self + rhs.a()
-    }
-}
-
-impl <N: NumType, const M: usize> AddAssign<ModNumC<N,M>> for ModNumC<N,M> {
-    fn add_assign(&mut self, rhs: ModNumC<N,M>) {
-        *self = *self + rhs.a();
-    }
-}
-
-impl <N: NumType, const M: usize> Neg for ModNumC<N,M> {
-    type Output = ModNumC<N,M>;
-
-    fn neg(self) -> Self::Output {
-        self.with(self.m() - self.num)
-    }
-}
-
-impl <N: NumType, const M: usize> Sub<N> for ModNumC<N,M> {
-    type Output = ModNumC<N,M>;
-
-    fn sub(self, rhs: N) -> Self::Output {
-        self + (-ModNumC::new(rhs))
-    }
-}
-
-impl <N: NumType, const M: usize> SubAssign<N> for ModNumC<N,M> {
-    fn sub_assign(&mut self, rhs: N) {
-        *self = *self - rhs;
-    }
-}
-
-impl <N: NumType, const M: usize> Sub<ModNumC<N,M>> for ModNumC<N,M> {
-    type Output = ModNumC<N,M>;
-
-    fn sub(self, rhs: ModNumC<N,M>) -> Self::Output {
-        self - rhs.a()
-    }
-}
-
-impl <N: NumType, const M: usize> SubAssign<ModNumC<N,M>> for ModNumC<N,M> {
-    fn sub_assign(&mut self, rhs: ModNumC<N,M>) {
-        *self += -rhs;
-    }
-}
-
-impl <N: NumType, const M: usize> Mul<N> for ModNumC<N,M> {
-    type Output = ModNumC<N,M>;
-
-    fn mul(self, rhs: N) -> Self::Output {
-        self.do_mul(rhs)
-    }
-}
-
-impl <N: NumType, const M: usize> MulAssign<N> for ModNumC<N,M> {
-    fn mul_assign(&mut self, rhs: N) {
-        *self = *self * rhs;
-    }
-}
-
-impl <N: NumType, const M: usize> Mul<ModNumC<N,M>> for ModNumC<N,M> {
-    type Output = ModNumC<N,M>;
-
-    fn mul(self, rhs: ModNumC<N,M>) -> Self::Output {
-        self * rhs.a()
-    }
-}
-
-impl <N: NumType, const M: usize> MulAssign<ModNumC<N,M>> for ModNumC<N,M> {
-    fn mul_assign(&mut self, rhs: ModNumC<N,M>) {
-        *self = *self * rhs.a();
-    }
-}
-
-impl <N: NumType, const M: usize> Div<N> for ModNumC<N,M> {
-    type Output = Option<Self>;
-
-    fn div(self, rhs: N) -> Self::Output {
-        self.do_div(rhs)
-    }
-}
-
-impl <N: NumType, const M: usize> DivAssign<N> for ModNumC<N,M> {
-
-    /// Performs division in place.
-    /// Panics if the quotient is undefined.
-    fn div_assign(&mut self, rhs: N) {
-        *self = (*self / rhs).unwrap();
-    }
-}
-
-impl <N: NumType, const M: usize> Div<ModNumC<N,M>> for ModNumC<N,M> {
-    type Output = Option<Self>;
-
-    fn div(self, rhs: Self) -> Self::Output {
-        self / rhs.a()
-    }
-}
-
-impl <N: NumType, const M: usize> DivAssign<ModNumC<N,M>> for ModNumC<N,M> {
-
-    /// Performs division in place.
-    /// Panics if the quotient is undefined.
-    fn div_assign(&mut self, rhs: Self) {
-        *self = (*self / rhs.a()).unwrap();
-    }
-}
-
 
 impl <N: NumType, const M: usize> SaturatingAdd for ModNumC<N,M> {
     fn saturating_add(&self, v: &Self) -> Self {
@@ -932,18 +823,6 @@ impl <N: NumType, const M: usize> SaturatingSub for ModNumC<N,M> {
         } else {
             *self - *v
         }
-    }
-}
-
-impl <N: NumType, const M: usize> Pow<N> for ModNumC<N,M> {
-    type Output = ModNumC<N,M>;
-
-    /// Returns a^rhs (mod m), for rhs >= 0.
-    /// Implements efficient modular exponentiation by [repeated squaring](https://byorgey.wordpress.com/2020/02/15/competitive-programming-in-haskell-modular-arithmetic-part-1/).
-    ///
-    /// Panics if rhs < 0. If negative exponents are possible, use .pow_signed()
-    fn pow(self, rhs: N) -> Self::Output {
-        self.do_pow(rhs)
     }
 }
 
