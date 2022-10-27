@@ -22,6 +22,7 @@ they require their integer type to implement the `Copy` trait.
 * **1.0.0**:
   * Updated `ModNumC` to support `.pow()`, `.inverse()`, and division. 
   * Refactored as much implementation as possible into the `MNum` trait and some internal macros.
+  * Changed from Unlicense to Apache 2.0/MIT dual license.
 * **0.11.3**: 
   * Updated a doctest and edited some documentation.
 * **0.11.2**:
