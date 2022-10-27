@@ -439,12 +439,6 @@ impl <N: NumType> ModNum<N> {
     }
 }
 
-impl <N:NumType> Display for ModNum<N> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{} (mod {})", self.a(), self.m())
-    }
-}
-
 impl <N: NumType + Signed> ModNum<N> {
 
     /// Solves a pair of modular equations using the [Chinese Remainder Theorem](https://byorgey.wordpress.com/2020/03/03/competitive-programming-in-haskell-modular-arithmetic-part-2/).
@@ -474,30 +468,28 @@ impl <N: NumType + Signed> ModNum<N> {
     }
 }
 
-/// Returns **true** if **other** is congruent to **self.a() (mod self.m())**
-impl <N:NumType> PartialEq<N> for ModNum<N> {
-    fn eq(&self, other: &N) -> bool {
-        self.num == other.mod_floor(&self.modulo)
-    }
-}
-
-impl <N:NumType> PartialOrd<N> for ModNum<N> {
-    fn partial_cmp(&self, other: &N) -> Option<Ordering> {
-        self.a().partial_cmp(other)
-    }
-}
-
-macro_rules! try_match_type {
-    ($name:ty {$($generic:tt)*}) => ()
-}
-
-try_match_type! {
-    ModNum<N>
-    {const M: usize}
-}
-
-macro_rules! add_arithmetic {
+macro_rules! derive_modulo_arithmetic {
     ($name:ty {$($generic:tt)*}) => {
+
+        impl <N:NumType,$($generic)*> Display for $name {
+            fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+                write!(f, "{} (mod {})", self.a(), self.m())
+            }
+        }
+
+        /// Returns **true** if **other** is congruent to **self.a() (mod self.m())**
+        impl <N:NumType,$($generic)*> PartialEq<N> for $name {
+            fn eq(&self, other: &N) -> bool {
+                self.num == other.mod_floor(&self.m())
+            }
+        }
+
+        impl <N:NumType,$($generic)*> PartialOrd<N> for $name {
+            fn partial_cmp(&self, other: &N) -> Option<Ordering> {
+                self.a().partial_cmp(other)
+            }
+        }
+
         impl <N: NumType,$($generic)*> Add<N> for $name {
             type Output = Self;
 
@@ -516,14 +508,12 @@ macro_rules! add_arithmetic {
             type Output = Self;
 
             fn add(self, rhs: Self) -> Self::Output {
-                assert_eq!(self.m(), rhs.m());
                 self + rhs.a()
             }
         }
 
         impl <N: NumType,$($generic)*> AddAssign<$name> for $name {
             fn add_assign(&mut self, rhs: Self) {
-                assert_eq!(self.m(), rhs.m());
                 *self = *self + rhs.a();
             }
         }
@@ -555,14 +545,12 @@ macro_rules! add_arithmetic {
             type Output = Self;
 
             fn sub(self, rhs: Self) -> Self::Output {
-                assert_eq!(self.m(), rhs.m());
                 self - rhs.a()
             }
         }
 
         impl <N: NumType,$($generic)*> SubAssign<$name> for $name {
             fn sub_assign(&mut self, rhs: Self) {
-                assert_eq!(self.m(), rhs.m());
                 *self += -rhs;
             }
         }
@@ -592,7 +580,6 @@ macro_rules! add_arithmetic {
 
         impl <N: NumType,$($generic)*> MulAssign<$name> for $name {
             fn mul_assign(&mut self, rhs: Self) {
-                assert_eq!(self.m(), rhs.m());
                 *self = *self * rhs.a();
             }
         }
@@ -618,7 +605,6 @@ macro_rules! add_arithmetic {
             type Output = Option<Self>;
 
             fn div(self, rhs: Self) -> Self::Output {
-                assert_eq!(self.m(), rhs.m());
                 self / rhs.a()
             }
         }
@@ -628,7 +614,6 @@ macro_rules! add_arithmetic {
             /// Performs division in place.
             /// Panics if the quotient is undefined.
             fn div_assign(&mut self, rhs: Self) {
-                assert_eq!(self.m(), rhs.m());
                 *self = (*self / rhs.a()).unwrap();
             }
         }
@@ -660,7 +645,6 @@ macro_rules! add_arithmetic {
             type Output = Self;
 
             fn pow(self, rhs: Self) -> Self::Output {
-                assert_eq!(self.m(), rhs.m());
                 self.pow(rhs.a())
             }
         }
@@ -674,10 +658,32 @@ macro_rules! add_arithmetic {
                 }
             }
         }
+
+
+
+        impl <N: NumType, $($generic)*> SaturatingAdd for $name {
+            fn saturating_add(&self, v: &Self) -> Self {
+                if self.a() + v.a() >= self.m() {
+                    self.with(self.m() - N::one())
+                } else {
+                    *self + *v
+                }
+            }
+        }
+
+        impl <N: NumType, $($generic)*> SaturatingSub for $name {
+            fn saturating_sub(&self, v: &Self) -> Self {
+                if self.a() < v.a() {
+                    self.with(N::zero())
+                } else {
+                    *self - *v
+                }
+            }
+        }
     }
 }
 
-add_arithmetic! {
+derive_modulo_arithmetic! {
     ModNum<N>
     {}
 }
@@ -724,38 +730,10 @@ impl <N: NumType, M:MNum<Num=N> + Add<N,Output=M> + Sub<N,Output=M>> DoubleEnded
     }
 }
 
-impl <N: NumType> SaturatingAdd for ModNum<N> {
-    fn saturating_add(&self, v: &Self) -> Self {
-        assert_eq!(self.m(), v.m());
-        if self.a() + v.a() >= self.m() {
-            self.with(self.m() - N::one())
-        } else {
-            *self + *v
-        }
-    }
-}
-
-impl <N: NumType> SaturatingSub for ModNum<N> {
-    fn saturating_sub(&self, v: &Self) -> Self {
-        assert_eq!(self.m(), v.m());
-        if self.a() < v.a() {
-            self.with(N::zero())
-        } else {
-            *self - *v
-        }
-    }
-}
-
 /// Represents an integer **a (mod M)**
 #[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd,Hash)]
 pub struct ModNumC<N: FromPrimitive, const M: usize> {
     num: N
-}
-
-impl <N:Display+FromPrimitive, const M: usize> Display for ModNumC<N,M> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{} (mod {})", self.num, M)
-    }
 }
 
 impl <N:NumType, const M: usize> MNum for ModNumC<N,M> {
@@ -787,43 +765,9 @@ impl <N: NumType, const M: usize> ModNumC<N,M> {
     }
 }
 
-/// Returns **true** if **other** is congruent to **self.a() (mod self.m())**
-impl <N: NumType, const M: usize> PartialEq<N> for ModNumC<N,M> {
-    fn eq(&self, other: &N) -> bool {
-        *self == ModNumC::new(*other)
-    }
-}
-
-impl <N: NumType, const M: usize> PartialOrd<N> for ModNumC<N,M> {
-    fn partial_cmp(&self, other: &N) -> Option<Ordering> {
-        self.a().partial_cmp(other)
-    }
-}
-
-
-add_arithmetic! {
+derive_modulo_arithmetic! {
     ModNumC<N,M>
     {const M: usize}
-}
-
-impl <N: NumType, const M: usize> SaturatingAdd for ModNumC<N,M> {
-    fn saturating_add(&self, v: &Self) -> Self {
-        if self.a() + v.a() >= self.m() {
-            self.with(self.m() - N::one())
-        } else {
-            *self + *v
-        }
-    }
-}
-
-impl <N: NumType, const M: usize> SaturatingSub for ModNumC<N,M> {
-    fn saturating_sub(&self, v: &Self) -> Self {
-        if self.a() < v.a() {
-            self.with(N::zero())
-        } else {
-            *self - *v
-        }
-    }
 }
 
 #[cfg(test)]
