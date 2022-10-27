@@ -679,8 +679,7 @@ macro_rules! derive_modulo_arithmetic {
 }
 
 derive_modulo_arithmetic! {
-    ModNum<N>
-    {}
+    ModNum<N> {}
 }
 
 /// A double-ended iterator that starts with the ModNum upon which it is invoked,
@@ -761,8 +760,7 @@ impl <N: NumType, const M: usize> ModNumC<N,M> {
 }
 
 derive_modulo_arithmetic! {
-    ModNumC<N,M>
-    {const M: usize}
+    ModNumC<N,M> {const M: usize}
 }
 
 #[cfg(test)]
