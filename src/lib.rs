@@ -517,15 +517,11 @@ macro_rules! derive_modulo_arithmetic {
         }
 
         derive_assign! {
-            $name, AddAssign<N>, N, add_assign
-            {+}
-            {$($generic)*}
+            $name, AddAssign<N>, N, add_assign {+} {$($generic)*}
         }
 
         derive_assign! {
-            $name, AddAssign<$name>, $name, add_assign
-            {+}
-            {$($generic)*}
+            $name, AddAssign<$name>, $name, add_assign {+} {$($generic)*}
         }
 
         impl <N: NumType,$($generic)*> Neg for $name {
@@ -545,15 +541,11 @@ macro_rules! derive_modulo_arithmetic {
         }
 
         derive_assign! {
-            $name, SubAssign<N>, N, sub_assign
-            {-}
-            {$($generic)*}
+            $name, SubAssign<N>, N, sub_assign {-} {$($generic)*}
         }
 
         derive_assign! {
-            $name, SubAssign<$name>, $name, sub_assign
-            {-}
-            {$($generic)*}
+            $name, SubAssign<$name>, $name, sub_assign {-} {$($generic)*}
         }
 
         impl <N: NumType,$($generic)*> Sub<$name> for $name {
@@ -573,15 +565,11 @@ macro_rules! derive_modulo_arithmetic {
         }
 
         derive_assign! {
-            $name, MulAssign<N>, N, mul_assign
-            {*}
-            {$($generic)*}
+            $name, MulAssign<N>, N, mul_assign {*} {$($generic)*}
         }
 
         derive_assign! {
-            $name, MulAssign<$name>, $name, mul_assign
-            {*}
-            {$($generic)*}
+            $name, MulAssign<$name>, $name, mul_assign {*} {$($generic)*}
         }
 
         impl <N: NumType,$($generic)*> Mul<$name> for $name {
