@@ -468,6 +468,16 @@ impl <N: NumType + Signed> ModNum<N> {
     }
 }
 
+macro_rules! derive_assign {
+    ($name:ty, $implname:ty, $rhs_type:ty, $methodname:ident {$symbol:tt} {$($generic:tt)*}) => {
+        impl <N: NumType,$($generic)*> $implname for $name {
+            fn $methodname(&mut self, rhs: $rhs_type) {
+                *self = *self $symbol rhs;
+            }
+        }
+    }
+}
+
 macro_rules! derive_modulo_arithmetic {
     ($name:ty {$($generic:tt)*}) => {
 
@@ -498,12 +508,6 @@ macro_rules! derive_modulo_arithmetic {
             }
         }
 
-        impl <N: NumType,$($generic)*> AddAssign<N> for $name {
-            fn add_assign(&mut self, rhs: N) {
-                *self = *self + rhs;
-            }
-        }
-
         impl <N: NumType,$($generic)*> Add<$name> for $name {
             type Output = Self;
 
@@ -512,12 +516,17 @@ macro_rules! derive_modulo_arithmetic {
             }
         }
 
-        impl <N: NumType,$($generic)*> AddAssign<$name> for $name {
-            fn add_assign(&mut self, rhs: Self) {
-                *self = *self + rhs.a();
-            }
+        derive_assign! {
+            $name, AddAssign<N>, N, add_assign
+            {+}
+            {$($generic)*}
         }
 
+        derive_assign! {
+            $name, AddAssign<$name>, $name, add_assign
+            {+}
+            {$($generic)*}
+        }
 
         impl <N: NumType,$($generic)*> Neg for $name {
             type Output = Self;
@@ -535,10 +544,16 @@ macro_rules! derive_modulo_arithmetic {
             }
         }
 
-        impl <N: NumType,$($generic)*> SubAssign<N> for $name {
-            fn sub_assign(&mut self, rhs: N) {
-                *self = *self - rhs;
-            }
+        derive_assign! {
+            $name, SubAssign<N>, N, sub_assign
+            {-}
+            {$($generic)*}
+        }
+
+        derive_assign! {
+            $name, SubAssign<$name>, $name, sub_assign
+            {-}
+            {$($generic)*}
         }
 
         impl <N: NumType,$($generic)*> Sub<$name> for $name {
@@ -546,12 +561,6 @@ macro_rules! derive_modulo_arithmetic {
 
             fn sub(self, rhs: Self) -> Self::Output {
                 self - rhs.a()
-            }
-        }
-
-        impl <N: NumType,$($generic)*> SubAssign<$name> for $name {
-            fn sub_assign(&mut self, rhs: Self) {
-                *self += -rhs;
             }
         }
 
@@ -563,10 +572,16 @@ macro_rules! derive_modulo_arithmetic {
             }
         }
 
-        impl <N: NumType,$($generic)*> MulAssign<N> for $name {
-            fn mul_assign(&mut self, rhs: N) {
-                *self = *self * rhs;
-            }
+        derive_assign! {
+            $name, MulAssign<N>, N, mul_assign
+            {*}
+            {$($generic)*}
+        }
+
+        derive_assign! {
+            $name, MulAssign<$name>, $name, mul_assign
+            {*}
+            {$($generic)*}
         }
 
         impl <N: NumType,$($generic)*> Mul<$name> for $name {
@@ -575,12 +590,6 @@ macro_rules! derive_modulo_arithmetic {
             fn mul(self, rhs: Self) -> Self::Output {
                 assert_eq!(self.m(), rhs.m());
                 self * rhs.a()
-            }
-        }
-
-        impl <N: NumType,$($generic)*> MulAssign<$name> for $name {
-            fn mul_assign(&mut self, rhs: Self) {
-                *self = *self * rhs.a();
             }
         }
 
@@ -658,8 +667,6 @@ macro_rules! derive_modulo_arithmetic {
                 }
             }
         }
-
-
 
         impl <N: NumType, $($generic)*> SaturatingAdd for $name {
             fn saturating_add(&self, v: &Self) -> Self {
