@@ -898,10 +898,10 @@ impl <N: NumType> Display for WrapCountNum<N> {
 }
 
 macro_rules! derive_wrap_assign {
-    ($name:ty, $implname:ty, $rhs_type:ty, $methodname:ident, $expr:expr, {$($generic:tt)*}) => {
+    ($name:ty, $implname:ty, $rhs_type:ty, $methodname:ident {$symbol:tt} {$($generic:tt)*}) => {
         impl <N: NumType,$($generic)*> $implname for $name {
             fn $methodname(&mut self, rhs: $rhs_type) {
-                let result: $name = ($expr)(*self, rhs);
+                let result = *self $symbol rhs;
                 self.num = result.num;
                 self.wraps += result.wraps;
             }
@@ -910,19 +910,19 @@ macro_rules! derive_wrap_assign {
 }
 
 derive_wrap_assign! {
-    WrapCountNum<N>, AddAssign<N>, N, add_assign, |a, b| a + b, {}
+    WrapCountNum<N>, AddAssign<N>, N, add_assign {+} {}
 }
 
 derive_wrap_assign! {
-    WrapCountNum<N>, AddAssign<WrapCountNum<N>>, WrapCountNum<N>, add_assign, |a, b: WrapCountNum<N>| a + b.a(), {}
+    WrapCountNum<N>, AddAssign<WrapCountNum<N>>, WrapCountNum<N>, add_assign {+} {}
 }
 
 derive_wrap_assign! {
-    WrapCountNum<N>, MulAssign<N>, N, mul_assign, |a, b| a * b, {}
+    WrapCountNum<N>, MulAssign<N>, N, mul_assign {*} {}
 }
 
 derive_wrap_assign! {
-    WrapCountNum<N>, MulAssign<WrapCountNum<N>>, WrapCountNum<N>, mul_assign, |a, b: WrapCountNum<N>| a * b.a(), {}
+    WrapCountNum<N>, MulAssign<WrapCountNum<N>>, WrapCountNum<N>, mul_assign {*} {}
 }
 
 #[cfg(test)]
