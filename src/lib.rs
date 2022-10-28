@@ -7,6 +7,8 @@
 //!   modulo.
 //! - `ModNumIterator` is a double-ended iterator that starts with the `ModNum` or `ModNumC` upon
 //!   which it is invoked, making a complete traversal of the elements in that object's ring.
+//! - `WrapCountNum` is similar to `ModNum`, but additionally tracks the amount of "wraparound"
+//!   that produced the modulo value.
 //!
 //! `ModNum` objects represent a value modulo **m**. The value and modulo can be of any
 //! primitive integer type.  Arithmetic operators include `+`, `-` (both unary and binary),
@@ -18,11 +20,11 @@
 //!
 //! This library was originally developed to facilitate bidirectional navigation through fixed-size
 //! arrays at arbitrary starting points. This is facilitated by a double-ended iterator that
-//! traverses the entire ring starting at any desired value. The iterator supports both
-//! `ModNum` and `ModNumC`.
+//! traverses the entire ring starting at any desired value. The iterator supports
+//! `ModNum`, `ModNumC`, and `WrapCountNum`.
 //!
-//! Note that `ModNum` and `ModNumC` are not designed to work with arbitrary-length integers, as
-//! they require their integer type to implement the `Copy` trait.
+//! Note that `ModNum`, `ModNumC`, and `WrapCountNum` are not designed to work with
+//! arbitrary-length integers, as they require their integer type to implement the `Copy` trait.
 //!
 //! For the [2020 Advent of Code](https://adventofcode.com/2020)
 //! ([Day 13](https://adventofcode.com/2020/day/13) part 2),
@@ -230,7 +232,7 @@
 //!
 //! Inequalities are also defined over those same sets.
 //!
-//! ```
+//!```
 //! use bare_metal_modulo::*;
 //!
 //! let m = ModNum::new(2, 5);
@@ -238,6 +240,10 @@
 //! assert!(m == 7);
 //! assert!(m == -3);
 //! assert!(m != 3);
+//!
+//! assert_eq!(m, ModNum::new(2, 5));
+//! assert_eq!(m, ModNum::new(7, 5));
+//! assert_eq!(m, ModNum::new(-3, 5));
 //!
 //! assert!(m < 4);
 //! assert!(m < 8);
@@ -263,6 +269,69 @@
 //! assert!(n < 2);
 //! assert!(n > 0);
 //! ```
+//!
+//! # Counting Wraps
+//!
+//! Modular numbers represent the remainder of an integer when divided by the modulo. If we also
+//! store the quotient in addition to the remainder, we have a count of the number of times a
+//! value had to "wrap around" during the calculation.
+//!
+//! For example, if we start with **8 (mod 17)** and add **42**, the result is **16 (mod 17)** with
+//! a wraparound of **2**.
+//!
+//! `WrapCountNum` objects store this wraparound value and make it available.
+//!
+//! ```
+//! use bare_metal_modulo::*;
+//!
+//! let mut value = WrapCountNum::new(8, 17);
+//! value += 42;
+//! assert_eq!(value, 16);
+//! assert_eq!(value.wraps(), 2);
+//!
+//! value += 18;
+//! assert_eq!(value, 0);
+//! assert_eq!(value.wraps(), 4);
+//!
+//! value += 11;
+//! assert_eq!(value, 11);
+//! assert_eq!(value.wraps(), 4);
+//!
+//! value *= 5;
+//! assert_eq!(value, 4);
+//! assert_eq!(value.wraps(), 7);
+//! ```
+//!
+//! Because regular operations produce a new `WordCountNum` value every time, `value = value + x`
+//! only tracks wraps for a single operation, unlike `value += x`.
+//!
+//! ```
+//! use bare_metal_modulo::*;
+//!
+//! let mut value = WrapCountNum::new(8, 17);
+//! value = value + 42;
+//! assert_eq!(value, 16);
+//! assert_eq!(value.wraps(), 2);
+//!
+//! value = value + 18;
+//! assert_eq!(value, 0);
+//! assert_eq!(value.wraps(), 2);
+//!
+//! value = value + 11;
+//! assert_eq!(value, 11);
+//! assert_eq!(value.wraps(), 0);
+//!
+//! value *= 5;
+//! assert_eq!(value, 4);
+//! assert_eq!(value.wraps(), 3);
+//! ```
+//!
+//! // Come back to this later.
+//! //let mut value = WrapCountNum::new(2, 5);
+//! //value -= 8;
+//! //assert_eq!(value, 4);
+//! //assert_eq!(value.wraps(), -1);
+//!
 //!
 //! # Iteration
 //! I originally created `ModNum` to facilitate cyclic iteration through a fixed-size array from an
@@ -552,83 +621,6 @@ macro_rules! derive_core_modulo_arithmetic {
                 self * rhs.a()
             }
         }
-
-        impl <N: NumType + Signed,$($generic)*> Div<N> for $name {
-            type Output = Option<Self>;
-
-            fn div(self, rhs: N) -> Self::Output {
-                self.with(rhs).inverse().map(|inv| self * inv.a())
-            }
-        }
-
-        impl <N: NumType + Signed,$($generic)*> Div<$name> for $name {
-            type Output = Option<Self>;
-
-            fn div(self, rhs: Self) -> Self::Output {
-                self / rhs.a()
-            }
-        }
-
-        impl <N: NumType,$($generic)*> Pow<N> for $name {
-            type Output = Self;
-
-            /// Returns a^rhs (mod m), for rhs >= 0.
-            /// Implements efficient modular exponentiation by [repeated squaring](https://byorgey.wordpress.com/2020/02/15/competitive-programming-in-haskell-modular-arithmetic-part-1/).
-            ///
-            /// Panics if rhs < 0. If negative exponents are possible, use .pow_signed()
-            fn pow(self, rhs: N) -> Self::Output {
-                if rhs < N::zero() {
-                    panic!("Negative exponentiation undefined for ModNum.pow(). Try .pow_signed() instead.")
-                } else if rhs == N::zero() {
-                    self.with(N::one())
-                } else {
-                    let r = self.pow(rhs.div_floor(&(N::one() + N::one())));
-                    let mut sq = r * r;
-                    if rhs.is_odd() {
-                        sq = sq * self;
-                    }
-                    sq
-                }
-            }
-        }
-
-        impl <N: NumType,$($generic)*> Pow<$name> for $name {
-            type Output = Self;
-
-            fn pow(self, rhs: Self) -> Self::Output {
-                self.pow(rhs.a())
-            }
-        }
-
-        impl <N: NumType + Signed,$($generic)*> $name {
-            pub fn pow_signed(&self, rhs: N) -> Option<Self> {
-                if rhs < N::zero() {
-                    self.pow(-rhs).inverse()
-                } else {
-                    Some(self.pow(rhs))
-                }
-            }
-        }
-
-        impl <N: NumType, $($generic)*> SaturatingAdd for $name {
-            fn saturating_add(&self, v: &Self) -> Self {
-                if self.a() + v.a() >= self.m() {
-                    self.with(self.m() - N::one())
-                } else {
-                    *self + *v
-                }
-            }
-        }
-
-        impl <N: NumType, $($generic)*> SaturatingSub for $name {
-            fn saturating_sub(&self, v: &Self) -> Self {
-                if self.a() < v.a() {
-                    self.with(N::zero())
-                } else {
-                    *self - *v
-                }
-            }
-        }
     }
 }
 
@@ -685,6 +677,83 @@ macro_rules! derive_modulo_arithmetic {
             /// Panics if the quotient is undefined.
             fn div_assign(&mut self, rhs: Self) {
                 *self = (*self / rhs.a()).unwrap();
+            }
+        }
+
+        impl <N: NumType, $($generic)*> SaturatingAdd for $name {
+            fn saturating_add(&self, v: &Self) -> Self {
+                if self.a() + v.a() >= self.m() {
+                    self.with(self.m() - N::one())
+                } else {
+                    *self + *v
+                }
+            }
+        }
+
+        impl <N: NumType, $($generic)*> SaturatingSub for $name {
+            fn saturating_sub(&self, v: &Self) -> Self {
+                if self.a() < v.a() {
+                    self.with(N::zero())
+                } else {
+                    *self - *v
+                }
+            }
+        }
+
+        impl <N: NumType + Signed,$($generic)*> Div<N> for $name {
+            type Output = Option<Self>;
+
+            fn div(self, rhs: N) -> Self::Output {
+                self.with(rhs).inverse().map(|inv| self * inv.a())
+            }
+        }
+
+        impl <N: NumType + Signed,$($generic)*> Div<$name> for $name {
+            type Output = Option<Self>;
+
+            fn div(self, rhs: Self) -> Self::Output {
+                self / rhs.a()
+            }
+        }
+
+        impl <N: NumType,$($generic)*> Pow<N> for $name {
+            type Output = Self;
+
+            /// Returns a^rhs (mod m), for rhs >= 0.
+            /// Implements efficient modular exponentiation by [repeated squaring](https://byorgey.wordpress.com/2020/02/15/competitive-programming-in-haskell-modular-arithmetic-part-1/).
+            ///
+            /// Panics if rhs < 0. If negative exponents are possible, use .pow_signed()
+            fn pow(self, rhs: N) -> Self::Output {
+                if rhs < N::zero() {
+                    panic!("Negative exponentiation undefined for ModNum.pow(). Try .pow_signed() instead.")
+                } else if rhs == N::zero() {
+                    self.with(N::one())
+                } else {
+                    let r = self.pow(rhs.div_floor(&(N::one() + N::one())));
+                    let mut sq = r * r;
+                    if rhs.is_odd() {
+                        sq = sq * self;
+                    }
+                    sq
+                }
+            }
+        }
+
+        impl <N: NumType,$($generic)*> Pow<$name> for $name {
+            type Output = Self;
+
+            fn pow(self, rhs: Self) -> Self::Output {
+                self.pow(rhs.a())
+            }
+        }
+
+        impl <N: NumType + Signed,$($generic)*> $name {
+            pub fn pow_signed(&self, rhs: N) -> Option<Self> {
+                if rhs < N::zero() {
+                    self.pow(-rhs).inverse()
+                } else {
+                    Some(self.pow(rhs))
+                }
             }
         }
     }
@@ -807,6 +876,11 @@ impl <N: NumType> WrapCountNum<N> {
         WrapCountNum {num, modulo, wraps}
     }
 
+    /// Returns the total number of wraparounds counted when calculating this value.
+    pub fn wraps(&self) -> N {
+        self.wraps
+    }
+
     /// Returns an iterator starting at **a (mod m)** and ending at **a - 1 (mod m)**
     pub fn iter(&self) -> ModNumIterator<N,Self> {
         ModNumIterator::new(*self)
@@ -844,27 +918,11 @@ derive_wrap_assign! {
 }
 
 derive_wrap_assign! {
-    WrapCountNum<N>, SubAssign<N>, N, sub_assign, |a, b| a - b, {}
-}
-
-derive_wrap_assign! {
-    WrapCountNum<N>, SubAssign<WrapCountNum<N>>, WrapCountNum<N>, sub_assign, |a, b: WrapCountNum<N>| a - b.a(), {}
-}
-
-derive_wrap_assign! {
     WrapCountNum<N>, MulAssign<N>, N, mul_assign, |a, b| a * b, {}
 }
 
 derive_wrap_assign! {
     WrapCountNum<N>, MulAssign<WrapCountNum<N>>, WrapCountNum<N>, mul_assign, |a, b: WrapCountNum<N>| a * b.a(), {}
-}
-
-derive_wrap_assign! {
-    WrapCountNum<N>, DivAssign<N>, N, div_assign, |a, b| (a / b: NumType + Signed).unwrap(), {}
-}
-
-derive_wrap_assign! {
-    WrapCountNum<N>, DivAssign<WrapCountNum<N>>, WrapCountNum<N>, div_assign, |a, b: WrapCountNum<N>| (a / b.a()).unwrap(), {}
 }
 
 #[cfg(test)]
@@ -974,6 +1032,25 @@ mod tests {
     }
 
     #[test]
+    fn test_assign_2() {
+        let mut m = ModNum::new(2, 5);
+        m += ModNum::new(2, 5);
+        assert_eq!(m, ModNum::new(4, 5));
+        m += ModNum::new(2, 5);
+        assert_eq!(m, ModNum::new(1, 5));
+        m -= ModNum::new(3, 5);
+        assert_eq!(m, ModNum::new(3, 5));
+        m *= ModNum::new(2, 5);
+        assert_eq!(m, ModNum::new(1, 5));
+        m *= ModNum::new(2, 5);
+        assert_eq!(m, ModNum::new(2, 5));
+        m *= ModNum::new(2, 5);
+        assert_eq!(m, ModNum::new(4, 5));
+        m *= ModNum::new(2, 5);
+        assert_eq!(m, ModNum::new(3, 5));
+    }
+
+    #[test]
     fn test_chinese_remainder() {
         let x = ModNum::new(2, 5);
         let y = ModNum::new(3, 7);
@@ -1051,12 +1128,5 @@ mod tests {
         for (exp, result) in (2..).map(|n| -n).zip([4, 2, 1, 3].iter().cycle()).take(20) {
             assert_eq!(m.pow_signed(exp).unwrap().a(), *result);
         }
-    }
-
-    #[test]
-    fn test_assign_2() {
-        let mut m = ModNum::new(2, 5);
-        m += ModNum::new(4, 5);
-        assert_eq!(m, 1);
     }
 }
