@@ -13,15 +13,27 @@
 //! `ModNum` objects represent a value modulo **m**. The value and modulo can be of any
 //! primitive integer type.  Arithmetic operators include `+`, `-` (both unary and binary),
 //! `*`, `/`, `pow()`, `==`, `<`, `>`, `<=`, `>=`, and `!=`. Additional capabilities include
-//! computing multiplicative inverses and solving modular equations.
+//! computing multiplicative inverses and solving modular equations. Division, multiplicative
+//! inverse, and solving modular equations are only defined for signed types.
 //!
 //! `ModNumC` objects likewise represent a value modulo **M**, where **M** is a generic constant of
 //! the `usize` type. `ModNumC` objects support the same arithmetic operators as `ModNum` objects.
 //!
+//! Modular numbers represent the remainder of an integer when divided by the modulo. If we also
+//! store the quotient in addition to the remainder, we have a count of the number of times a
+//! value had to "wrap around" during the calculation.
+//!
+//! For example, if we start with **8 (mod 17)** and add **42**, the result is **16 (mod 17)** with
+//! a wraparound of **2**.
+//!
+//! `WrapCountNum` objects store this wraparound value and make it available. They only support
+//! subtraction and iteration with signed values, and they do not have the `pow()` operator
+//! defined.
+//!
 //! This library was originally developed to facilitate bidirectional navigation through fixed-size
 //! arrays at arbitrary starting points. This is facilitated by a double-ended iterator that
 //! traverses the entire ring starting at any desired value. The iterator supports
-//! `ModNum`, `ModNumC`, and `WrapCountNum`.
+//! `ModNum` and `ModNumC`. It also supports `WrapCountNum` for signed values only.
 //!
 //! Note that `ModNum`, `ModNumC`, and `WrapCountNum` are not designed to work with
 //! arbitrary-length integers, as they require their integer type to implement the `Copy` trait.
@@ -35,9 +47,12 @@
 //! by [Brent Yorgey](http://ozark.hendrix.edu/~yorgey/).
 //!
 //! # Accessing Values
-//! Each `ModNum`/`ModNumC` represents an integer **a (mod m)**. To access these values, use the
-//! corresponding **a()** and **m()** methods. Note that **a()** will always return a fully
-//! reduced value, regardless of how it was initialized.
+//! Each `ModNum`/`ModNumC`/`WrapCountNum` represents an integer **a (mod m)**. To access these
+//! values, use the corresponding **a()** and **m()** methods. Note that **a()** will always
+//! return a fully reduced value, regardless of how it was initialized.
+//!
+//! Each `WrapCountNum` tracks accumulated wraparounds. Use the **.wraps()** method to access
+//! this tracked count.
 //!
 //!```
 //! use bare_metal_modulo::*;
@@ -83,11 +98,9 @@
 //! # Arithmetic
 //! Addition, subtraction, and multiplication are all fully supported for both
 //! signed and unsigned integer types. The right-hand side may either be an integer of the
-//! corresponding type or another `ModNum`. In the latter case, if the modulo values differ
-//! it will **panic**. For a `ModNumC`, there is no risk of a panic, as any disparity will be
-//! flagged at compile time.
+//! corresponding type or another `ModNum`/`ModNumC` object.
 //!
-//! Unary negation is supported for both signed and unsigned integers.
+//! Unary negation and subtraction are supported for both signed and unsigned integers.
 //!
 //! ```
 //! use bare_metal_modulo::*;
@@ -137,8 +150,7 @@
 //! [`num::traits::SaturatingAdd`](https://docs.rs/num-traits/0.2.14/num_traits/ops/saturating/trait.SaturatingAdd.html)
 //! and
 //! [`num::traits::SaturatingSub`](https://docs.rs/num-traits/0.2.14/num_traits/ops/saturating/trait.SaturatingSub.html)
-//! traits are implemented
-//! as well.
+//! traits are implemented as well for `ModNum` and `ModNumC`.
 //!
 //! ```
 //! use bare_metal_modulo::*;
@@ -163,16 +175,16 @@
 //! ```
 //!
 //! Multiplicative inverse (using the **.inverse()** method) is supported for signed integers only.
-//! As inverses are only defined when **a** and **m** are relatively prime, **.inverse()** will return
-//! **None** when it is not possible to calculate.
+//! As inverses are only defined when **a** and **m** are relatively prime, **.inverse()** will
+//! return **None** when it is not possible to calculate.
 //!
-//! Division is defined in terms of the multiplicative inverse, so it is likewise only supported for
-//! signed integers, and will return **None** when the quotient does not exist. Assigned division (/=)
-//! will **panic** if the quotient does not exist.
+//! Division is defined in terms of the multiplicative inverse, so it is likewise only supported
+//! for signed integers, and will return **None** when the quotient does not exist. Assigned
+//! division (/=) will **panic** if the quotient does not exist.
 //!
-//! The **.pow()** method is fully supported for unsigned integer types. It also works for signed integer
-//! types, but it will **panic** if given a negative exponent. If negative exponents are possible,
-//! use **.pow_signed()**, which will return **None** if the result does not exist.
+//! The **.pow()** method is fully supported for unsigned integer types. It also works for signed
+//! integer types, but it will **panic** if given a negative exponent. If negative exponents are
+//! possible, use **.pow_signed()**, which will return **None** if the result does not exist.
 //!
 //! ```
 //! use bare_metal_modulo::*;
@@ -326,12 +338,29 @@
 //! assert_eq!(value.wraps(), 3);
 //! ```
 //!
-//! // Come back to this later.
-//! //let mut value = WrapCountNum::new(2, 5);
-//! //value -= 8;
-//! //assert_eq!(value, 4);
-//! //assert_eq!(value.wraps(), -1);
+//! Subtraction causes the wrap count to decrease. To simplify the implementation, `WrapCountNum`
+//! only defines subtraction on `Signed` numerical types.
 //!
+//! ```
+//! use bare_metal_modulo::*;
+//!
+//! let mut value = WrapCountNum::new(2, 5);
+//! value -= 8;
+//! assert_eq!(value, 4);
+//! assert_eq!(value.wraps(), -2);
+//!
+//! value -= 3;
+//! assert_eq!(value, 1);
+//! assert_eq!(value.wraps(), -2);
+//!
+//! value -= 13;
+//! assert_eq!(value, 3);
+//! assert_eq!(value.wraps(), -5);
+//!
+//! value += 8;
+//! assert_eq!(value, 1);
+//! assert_eq!(value.wraps(), -3);
+//! ```
 //!
 //! # Iteration
 //! I originally created `ModNum` to facilitate cyclic iteration through a fixed-size array from an
@@ -417,8 +446,6 @@
 //! let solution = ModNum::<i128>::chinese_remainder_system(values);
 //! assert_eq!(solution.unwrap().a(), 762009420388013796);
 //! ```
-
-extern crate alloc;
 
 use core::cmp::Ordering;
 use core::mem;
@@ -540,10 +567,10 @@ impl <N: NumType + Signed> ModNum<N> {
 }
 
 macro_rules! derive_assign {
-    ($name:ty, $implname:ty, $rhs_type:ty, $methodname:ident {$symbol:tt} {$($generic:tt)*}) => {
-        impl <N: NumType,$($generic)*> $implname for $name {
+    ($name:ty, $implname:ty, $rhs_type:ty, $methodname:ident {$symbol:tt} {$($generic:tt)*} {$($num_type_suffix:ident)?} {$($unwrap:tt)*}) => {
+        impl <N: NumType + $($num_type_suffix)?,$($generic)*> $implname for $name {
             fn $methodname(&mut self, rhs: $rhs_type) {
-                *self = *self $symbol rhs;
+                *self = (*self $symbol rhs)$($unwrap)*;
             }
         }
     }
@@ -581,6 +608,63 @@ macro_rules! derive_core_modulo_arithmetic {
             }
         }
 
+        impl <N: NumType,$($generic)*> Mul<N> for $name {
+            type Output = Self;
+
+            fn mul(self, rhs: N) -> Self::Output {
+                self.with(self.a() * rhs)
+            }
+        }
+
+        impl <N: NumType,$($generic)*> Mul<$name> for $name {
+            type Output = Self;
+
+            fn mul(self, rhs: Self) -> Self::Output {
+                assert_eq!(self.m(), rhs.m());
+                self * rhs.a()
+            }
+        }
+
+        impl <N: NumType + Signed,$($generic)*> Div<N> for $name {
+            type Output = Option<Self>;
+
+            fn div(self, rhs: N) -> Self::Output {
+                self.with(rhs).inverse().map(|inv| self * inv.a())
+            }
+        }
+
+        impl <N: NumType + Signed,$($generic)*> Div<$name> for $name {
+            type Output = Option<Self>;
+
+            fn div(self, rhs: Self) -> Self::Output {
+                self / rhs.a()
+            }
+        }
+    }
+}
+
+macro_rules! derive_modulo_arithmetic {
+    ($name:ty {$($generic:tt)*}) => {
+
+        derive_core_modulo_arithmetic! {
+            $name
+            {$($generic)*}
+        }
+
+        impl <N:NumType,$($generic)*> Display for $name {
+            fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+                write!(f, "{} (mod {})", self.a(), self.m())
+            }
+        }
+
+        derive_assign! {
+            $name, AddAssign<N>, N, add_assign {+} {$($generic)*} {} {}
+        }
+
+        derive_assign! {
+            $name, AddAssign<$name>, $name, add_assign {+} {$($generic)*} {} {}
+        }
+
         impl <N: NumType,$($generic)*> Neg for $name {
             type Output = Self;
 
@@ -605,79 +689,28 @@ macro_rules! derive_core_modulo_arithmetic {
             }
         }
 
-        impl <N: NumType,$($generic)*> Mul<N> for $name {
-            type Output = Self;
-
-            fn mul(self, rhs: N) -> Self::Output {
-                self.with(self.a() * rhs)
-            }
-        }
-
-        impl <N: NumType,$($generic)*> Mul<$name> for $name {
-            type Output = Self;
-
-            fn mul(self, rhs: Self) -> Self::Output {
-                assert_eq!(self.m(), rhs.m());
-                self * rhs.a()
-            }
-        }
-    }
-}
-
-macro_rules! derive_modulo_arithmetic {
-    ($name:ty {$($generic:tt)*}) => {
-
-        derive_core_modulo_arithmetic! {
-            $name
-            {$($generic)*}
-        }
-
-        impl <N:NumType,$($generic)*> Display for $name {
-            fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-                write!(f, "{} (mod {})", self.a(), self.m())
-            }
+        derive_assign! {
+            $name, SubAssign<N>, N, sub_assign {-} {$($generic)*} {} {}
         }
 
         derive_assign! {
-            $name, AddAssign<N>, N, add_assign {+} {$($generic)*}
+            $name, SubAssign<$name>, $name, sub_assign {-} {$($generic)*} {} {}
         }
 
         derive_assign! {
-            $name, AddAssign<$name>, $name, add_assign {+} {$($generic)*}
+            $name, MulAssign<N>, N, mul_assign {*} {$($generic)*} {} {}
         }
 
         derive_assign! {
-            $name, SubAssign<N>, N, sub_assign {-} {$($generic)*}
+            $name, MulAssign<$name>, $name, mul_assign {*} {$($generic)*} {} {}
         }
 
         derive_assign! {
-            $name, SubAssign<$name>, $name, sub_assign {-} {$($generic)*}
+            $name, DivAssign<N>, N, div_assign {/} {$($generic)*} {Signed} {.unwrap()}
         }
 
         derive_assign! {
-            $name, MulAssign<N>, N, mul_assign {*} {$($generic)*}
-        }
-
-        derive_assign! {
-            $name, MulAssign<$name>, $name, mul_assign {*} {$($generic)*}
-        }
-
-        impl <N: NumType + Signed,$($generic)*> DivAssign<N> for $name {
-
-            /// Performs division in place.
-            /// Panics if the quotient is undefined.
-            fn div_assign(&mut self, rhs: N) {
-                *self = (*self / rhs).unwrap();
-            }
-        }
-
-        impl <N: NumType + Signed,$($generic)*> DivAssign<$name> for $name {
-
-            /// Performs division in place.
-            /// Panics if the quotient is undefined.
-            fn div_assign(&mut self, rhs: Self) {
-                *self = (*self / rhs.a()).unwrap();
-            }
+            $name, DivAssign<$name>, $name, div_assign {/} {$($generic)*} {Signed} {.unwrap()}
         }
 
         impl <N: NumType, $($generic)*> SaturatingAdd for $name {
@@ -697,22 +730,6 @@ macro_rules! derive_modulo_arithmetic {
                 } else {
                     *self - *v
                 }
-            }
-        }
-
-        impl <N: NumType + Signed,$($generic)*> Div<N> for $name {
-            type Output = Option<Self>;
-
-            fn div(self, rhs: N) -> Self::Output {
-                self.with(rhs).inverse().map(|inv| self * inv.a())
-            }
-        }
-
-        impl <N: NumType + Signed,$($generic)*> Div<$name> for $name {
-            type Output = Option<Self>;
-
-            fn div(self, rhs: Self) -> Self::Output {
-                self / rhs.a()
             }
         }
 
@@ -873,14 +890,16 @@ impl <N: NumType> WrapCountNum<N> {
     /// of **a** as well.
     pub fn new(a: N, modulo: N) -> Self {
         let (wraps, num) = a.div_mod_floor(&modulo);
-        WrapCountNum {num, modulo, wraps}
+        WrapCountNum { num, modulo, wraps }
     }
 
     /// Returns the total number of wraparounds counted when calculating this value.
     pub fn wraps(&self) -> N {
         self.wraps
     }
+}
 
+impl <N: NumType + Signed> WrapCountNum<N> {
     /// Returns an iterator starting at **a (mod m)** and ending at **a - 1 (mod m)**
     pub fn iter(&self) -> ModNumIterator<N,Self> {
         ModNumIterator::new(*self)
@@ -891,17 +910,41 @@ derive_core_modulo_arithmetic! {
     WrapCountNum<N> {}
 }
 
-impl <N: NumType> Display for WrapCountNum<N> {
+impl <N: NumType +> Display for WrapCountNum<N> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         write!(f, "{} (mod {}) (wrap {})", self.a(), self.m(), self.wraps)
     }
 }
 
+impl <N: NumType + Signed> Neg for WrapCountNum<N> {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        WrapCountNum {num: -self.num, modulo: self.modulo, wraps: -self.wraps}
+    }
+}
+
+impl <N: NumType + Signed> Sub<N> for WrapCountNum<N> {
+    type Output = Self;
+
+    fn sub(self, rhs: N) -> Self::Output {
+        self.with(self.num - rhs)
+    }
+}
+
+impl <N: NumType + Signed> Sub<WrapCountNum<N>> for WrapCountNum<N> {
+    type Output = Self;
+
+    fn sub(self, rhs: WrapCountNum<N>) -> Self::Output {
+        self - rhs.a()
+    }
+}
+
 macro_rules! derive_wrap_assign {
-    ($name:ty, $implname:ty, $rhs_type:ty, $methodname:ident {$symbol:tt} {$($generic:tt)*}) => {
-        impl <N: NumType,$($generic)*> $implname for $name {
+    ($name:ty, $implname:ty, $rhs_type:ty, $methodname:ident {$symbol:tt} {$($num_type_suffix:ident)?} {$($unwrap:tt)*}) => {
+        impl <N: NumType + $($num_type_suffix)?> $implname for $name {
             fn $methodname(&mut self, rhs: $rhs_type) {
-                let result = *self $symbol rhs;
+                let result = (*self $symbol rhs)$($unwrap)*;
                 self.num = result.num;
                 self.wraps += result.wraps;
             }
@@ -910,23 +953,40 @@ macro_rules! derive_wrap_assign {
 }
 
 derive_wrap_assign! {
-    WrapCountNum<N>, AddAssign<N>, N, add_assign {+} {}
+    WrapCountNum<N>, AddAssign<N>, N, add_assign {+} {} {}
 }
 
 derive_wrap_assign! {
-    WrapCountNum<N>, AddAssign<WrapCountNum<N>>, WrapCountNum<N>, add_assign {+} {}
+    WrapCountNum<N>, AddAssign<WrapCountNum<N>>, WrapCountNum<N>, add_assign {+} {} {}
 }
 
 derive_wrap_assign! {
-    WrapCountNum<N>, MulAssign<N>, N, mul_assign {*} {}
+    WrapCountNum<N>, SubAssign<N>, N, sub_assign {-} {Signed} {}
 }
 
 derive_wrap_assign! {
-    WrapCountNum<N>, MulAssign<WrapCountNum<N>>, WrapCountNum<N>, mul_assign {*} {}
+    WrapCountNum<N>, SubAssign<WrapCountNum<N>>, WrapCountNum<N>, sub_assign {-} {Signed} {}
+}
+
+derive_wrap_assign! {
+    WrapCountNum<N>, MulAssign<N>, N, mul_assign {*} {} {}
+}
+
+derive_wrap_assign! {
+    WrapCountNum<N>, MulAssign<WrapCountNum<N>>, WrapCountNum<N>, mul_assign {*} {} {}
+}
+
+derive_wrap_assign! {
+    WrapCountNum<N>, DivAssign<N>, N, div_assign {/} {Signed} {.unwrap()}
+}
+
+derive_wrap_assign! {
+    WrapCountNum<N>, DivAssign<WrapCountNum<N>>, WrapCountNum<N>, div_assign {/} {Signed} {.unwrap()}
 }
 
 #[cfg(test)]
 mod tests {
+    extern crate alloc;
     use alloc::vec;
     use super::*;
 

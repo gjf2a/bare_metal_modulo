@@ -15,10 +15,19 @@ arrays at arbitrary starting points. This is facilitated by a double-ended itera
 traverses the entire ring starting at any desired value. The iterator supports both `ModNum` and
 `ModNumC.`
 
-Note that `ModNum` and `ModNumC` are not designed to work with arbitrary-length integers, as
-they require their integer type to implement the `Copy` trait.
+Modular numbers represent the remainder of an integer when divided by the modulo. If we also
+store the quotient in addition to the remainder, we have a count of the number of times a
+value had to "wrap around" during the calculation.
+
+For example, if we start with **8 (mod 17)** and add **42**, the result is **16 (mod 17)** with
+a wraparound of **2**. `WrapCountNum` objects store this wraparound value and make it available. 
+
+Note that `ModNum`, `ModNumC`, and `WrapCountNum` are not designed to work with arbitrary-length 
+integers, as they require their integer type to implement the `Copy` trait.
 
 # Updates
+* **1.1.0**: 
+  * Added `WrapCountNum`, a variant of `ModNum` that tracks wraparounds.
 * **1.0.0**:
   * Updated `ModNumC` to support `.pow()`, `.inverse()`, and division. 
   * Refactored as much implementation as possible into the `MNum` trait and some internal macros.
