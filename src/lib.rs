@@ -360,7 +360,7 @@ use core::fmt::{Debug, Display, Formatter};
 
 use trait_set::trait_set;
 trait_set! {
-    pub trait NumType = Copy + Clone + Integer + Display + Debug + NumCast + FromPrimitive;
+    pub trait NumType = Copy + Clone + Integer + Display + Debug + NumCast + FromPrimitive + AddAssign + SubAssign + MulAssign + DivAssign;
 }
 
 pub trait MNum : Copy + Eq + PartialEq {
@@ -480,14 +480,8 @@ macro_rules! derive_assign {
     }
 }
 
-macro_rules! derive_modulo_arithmetic {
+macro_rules! derive_core_modulo_arithmetic {
     ($name:ty {$($generic:tt)*}) => {
-
-        impl <N:NumType,$($generic)*> Display for $name {
-            fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-                write!(f, "{} (mod {})", self.a(), self.m())
-            }
-        }
 
         /// Returns **true** if **other** is congruent to **self.a() (mod self.m())**
         impl <N:NumType,$($generic)*> PartialEq<N> for $name {
@@ -518,14 +512,6 @@ macro_rules! derive_modulo_arithmetic {
             }
         }
 
-        derive_assign! {
-            $name, AddAssign<N>, N, add_assign {+} {$($generic)*}
-        }
-
-        derive_assign! {
-            $name, AddAssign<$name>, $name, add_assign {+} {$($generic)*}
-        }
-
         impl <N: NumType,$($generic)*> Neg for $name {
             type Output = Self;
 
@@ -542,14 +528,6 @@ macro_rules! derive_modulo_arithmetic {
             }
         }
 
-        derive_assign! {
-            $name, SubAssign<N>, N, sub_assign {-} {$($generic)*}
-        }
-
-        derive_assign! {
-            $name, SubAssign<$name>, $name, sub_assign {-} {$($generic)*}
-        }
-
         impl <N: NumType,$($generic)*> Sub<$name> for $name {
             type Output = Self;
 
@@ -564,14 +542,6 @@ macro_rules! derive_modulo_arithmetic {
             fn mul(self, rhs: N) -> Self::Output {
                 self.with(self.a() * rhs)
             }
-        }
-
-        derive_assign! {
-            $name, MulAssign<N>, N, mul_assign {*} {$($generic)*}
-        }
-
-        derive_assign! {
-            $name, MulAssign<$name>, $name, mul_assign {*} {$($generic)*}
         }
 
         impl <N: NumType,$($generic)*> Mul<$name> for $name {
@@ -591,29 +561,11 @@ macro_rules! derive_modulo_arithmetic {
             }
         }
 
-        impl <N: NumType + Signed,$($generic)*> DivAssign<N> for $name {
-
-            /// Performs division in place.
-            /// Panics if the quotient is undefined.
-            fn div_assign(&mut self, rhs: N) {
-                *self = (*self / rhs).unwrap();
-            }
-        }
-
         impl <N: NumType + Signed,$($generic)*> Div<$name> for $name {
             type Output = Option<Self>;
 
             fn div(self, rhs: Self) -> Self::Output {
                 self / rhs.a()
-            }
-        }
-
-        impl <N: NumType + Signed,$($generic)*> DivAssign<$name> for $name {
-
-            /// Performs division in place.
-            /// Panics if the quotient is undefined.
-            fn div_assign(&mut self, rhs: Self) {
-                *self = (*self / rhs.a()).unwrap();
             }
         }
 
@@ -675,6 +627,64 @@ macro_rules! derive_modulo_arithmetic {
                 } else {
                     *self - *v
                 }
+            }
+        }
+    }
+}
+
+macro_rules! derive_modulo_arithmetic {
+    ($name:ty {$($generic:tt)*}) => {
+
+        derive_core_modulo_arithmetic! {
+            $name
+            {$($generic)*}
+        }
+
+        impl <N:NumType,$($generic)*> Display for $name {
+            fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+                write!(f, "{} (mod {})", self.a(), self.m())
+            }
+        }
+
+        derive_assign! {
+            $name, AddAssign<N>, N, add_assign {+} {$($generic)*}
+        }
+
+        derive_assign! {
+            $name, AddAssign<$name>, $name, add_assign {+} {$($generic)*}
+        }
+
+        derive_assign! {
+            $name, SubAssign<N>, N, sub_assign {-} {$($generic)*}
+        }
+
+        derive_assign! {
+            $name, SubAssign<$name>, $name, sub_assign {-} {$($generic)*}
+        }
+
+        derive_assign! {
+            $name, MulAssign<N>, N, mul_assign {*} {$($generic)*}
+        }
+
+        derive_assign! {
+            $name, MulAssign<$name>, $name, mul_assign {*} {$($generic)*}
+        }
+
+        impl <N: NumType + Signed,$($generic)*> DivAssign<N> for $name {
+
+            /// Performs division in place.
+            /// Panics if the quotient is undefined.
+            fn div_assign(&mut self, rhs: N) {
+                *self = (*self / rhs).unwrap();
+            }
+        }
+
+        impl <N: NumType + Signed,$($generic)*> DivAssign<$name> for $name {
+
+            /// Performs division in place.
+            /// Panics if the quotient is undefined.
+            fn div_assign(&mut self, rhs: Self) {
+                *self = (*self / rhs.a()).unwrap();
             }
         }
     }
@@ -763,6 +773,98 @@ impl <N: NumType, const M: usize> ModNumC<N,M> {
 
 derive_modulo_arithmetic! {
     ModNumC<N,M> {const M: usize}
+}
+
+/// Represents an integer **a (mod M)**
+#[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd,Hash)]
+pub struct WrapCountNum<N: NumType> {
+    num: N,
+    modulo: N,
+    wraps: N
+}
+
+impl <N: NumType> MNum for WrapCountNum<N> {
+    type Num = N;
+
+    fn a(&self) -> Self::Num {
+        self.num
+    }
+
+    fn m(&self) -> Self::Num {
+        self.modulo
+    }
+
+    fn with(&self, new_a: Self::Num) -> Self {
+        Self::new(new_a, self.m())
+    }
+}
+
+impl <N: NumType> WrapCountNum<N> {
+    /// Creates a new integer **a (mod m)**, storing the number of wraparounds
+    /// of **a** as well.
+    pub fn new(a: N, modulo: N) -> Self {
+        let (wraps, num) = a.div_mod_floor(&modulo);
+        WrapCountNum {num, modulo, wraps}
+    }
+
+    /// Returns an iterator starting at **a (mod m)** and ending at **a - 1 (mod m)**
+    pub fn iter(&self) -> ModNumIterator<N,Self> {
+        ModNumIterator::new(*self)
+    }
+}
+
+derive_core_modulo_arithmetic! {
+    WrapCountNum<N> {}
+}
+
+impl <N: NumType> Display for WrapCountNum<N> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{} (mod {}) (wrap {})", self.a(), self.m(), self.wraps)
+    }
+}
+
+macro_rules! derive_wrap_assign {
+    ($name:ty, $implname:ty, $rhs_type:ty, $methodname:ident, $expr:expr, {$($generic:tt)*}) => {
+        impl <N: NumType,$($generic)*> $implname for $name {
+            fn $methodname(&mut self, rhs: $rhs_type) {
+                let result: $name = ($expr)(*self, rhs);
+                self.num = result.num;
+                self.wraps += result.wraps;
+            }
+        }
+    }
+}
+
+derive_wrap_assign! {
+    WrapCountNum<N>, AddAssign<N>, N, add_assign, |a, b| a + b, {}
+}
+
+derive_wrap_assign! {
+    WrapCountNum<N>, AddAssign<WrapCountNum<N>>, WrapCountNum<N>, add_assign, |a, b: WrapCountNum<N>| a + b.a(), {}
+}
+
+derive_wrap_assign! {
+    WrapCountNum<N>, SubAssign<N>, N, sub_assign, |a, b| a - b, {}
+}
+
+derive_wrap_assign! {
+    WrapCountNum<N>, SubAssign<WrapCountNum<N>>, WrapCountNum<N>, sub_assign, |a, b: WrapCountNum<N>| a - b.a(), {}
+}
+
+derive_wrap_assign! {
+    WrapCountNum<N>, MulAssign<N>, N, mul_assign, |a, b| a * b, {}
+}
+
+derive_wrap_assign! {
+    WrapCountNum<N>, MulAssign<WrapCountNum<N>>, WrapCountNum<N>, mul_assign, |a, b: WrapCountNum<N>| a * b.a(), {}
+}
+
+derive_wrap_assign! {
+    WrapCountNum<N>, DivAssign<N>, N, div_assign, |a, b| (a / b: NumType + Signed).unwrap(), {}
+}
+
+derive_wrap_assign! {
+    WrapCountNum<N>, DivAssign<WrapCountNum<N>>, WrapCountNum<N>, div_assign, |a, b: WrapCountNum<N>| (a / b.a()).unwrap(), {}
 }
 
 #[cfg(test)]
@@ -949,5 +1051,12 @@ mod tests {
         for (exp, result) in (2..).map(|n| -n).zip([4, 2, 1, 3].iter().cycle()).take(20) {
             assert_eq!(m.pow_signed(exp).unwrap().a(), *result);
         }
+    }
+
+    #[test]
+    fn test_assign_2() {
+        let mut m = ModNum::new(2, 5);
+        m += ModNum::new(4, 5);
+        assert_eq!(m, 1);
     }
 }
