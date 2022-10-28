@@ -8,7 +8,7 @@
 //! - `ModNumIterator` is a double-ended iterator that starts with the `ModNum` or `ModNumC` upon
 //!   which it is invoked, making a complete traversal of the elements in that object's ring.
 //! - `WrapCountNum` is similar to `ModNum`, but additionally tracks the amount of "wraparound"
-//!   that produced the modulo value.
+//!   that produced the modulo value. `WrapCountNumC` corresponds to `ModNumC`.
 //!
 //! `ModNum` objects represent a value modulo **m**. The value and modulo can be of any
 //! primitive integer type.  Arithmetic operators include `+`, `-` (both unary and binary),
@@ -26,17 +26,19 @@
 //! For example, if we start with **8 (mod 17)** and add **42**, the result is **16 (mod 17)** with
 //! a wraparound of **2**.
 //!
-//! `WrapCountNum` objects store this wraparound value and make it available. They only support
-//! subtraction and iteration with signed values, and they do not have the `pow()` operator
-//! defined.
+//! `WrapCountNum`/`WrapCountNumC` objects store this wraparound value and make it available. They
+//! only support subtraction and iteration with signed values, and they do not have the `pow()`
+//! operator defined.
 //!
 //! This library was originally developed to facilitate bidirectional navigation through fixed-size
 //! arrays at arbitrary starting points. This is facilitated by a double-ended iterator that
 //! traverses the entire ring starting at any desired value. The iterator supports
-//! `ModNum` and `ModNumC`. It also supports `WrapCountNum` for signed values only.
+//! `ModNum` and `ModNumC`. It also supports `WrapCountNum` and `WrapCountNumC` for signed values
+//! only.
 //!
-//! Note that `ModNum`, `ModNumC`, and `WrapCountNum` are not designed to work with
-//! arbitrary-length integers, as they require their integer type to implement the `Copy` trait.
+//! Note that `ModNum`, `ModNumC`, `WrapCountNum`, and `WrapCountNumC` are not designed to work
+//! with arbitrary-length integers, as they require their integer type to implement the `Copy`
+//! trait.
 //!
 //! For the [2020 Advent of Code](https://adventofcode.com/2020)
 //! ([Day 13](https://adventofcode.com/2020/day/13) part 2),
@@ -47,12 +49,12 @@
 //! by [Brent Yorgey](http://ozark.hendrix.edu/~yorgey/).
 //!
 //! # Accessing Values
-//! Each `ModNum`/`ModNumC`/`WrapCountNum` represents an integer **a (mod m)**. To access these
-//! values, use the corresponding **a()** and **m()** methods. Note that **a()** will always
-//! return a fully reduced value, regardless of how it was initialized.
+//! Each `ModNum`/`ModNumC`/`WrapCountNum`/`WrapCountNumC` represents an integer **a (mod m)**. To
+//! access these values, use the corresponding **a()** and **m()** methods. Note that **a()** will
+//! always return a fully reduced value, regardless of how it was initialized.
 //!
-//! Each `WrapCountNum` tracks accumulated wraparounds. Use the **.wraps()** method to access
-//! this tracked count.
+//! Each `WrapCountNum`/`WrapCountNumC` tracks accumulated wraparounds. Use the **.wraps()** method
+//! to access this tracked count.
 //!
 //!```
 //! use bare_metal_modulo::*;
@@ -362,6 +364,28 @@
 //! assert_eq!(value.wraps(), -3);
 //! ```
 //!
+//! There is a `const generic` version as well, `WrapCountNumC`:
+//! ```
+//! use bare_metal_modulo::*;
+//!
+//! let mut value = WrapCountNumC::<isize,17>::new(8);
+//! value += 42;
+//! assert_eq!(value, 16);
+//! assert_eq!(value.wraps(), 2);
+//!
+//! value += 18;
+//! assert_eq!(value, 0);
+//! assert_eq!(value.wraps(), 4);
+//!
+//! value += 11;
+//! assert_eq!(value, 11);
+//! assert_eq!(value.wraps(), 4);
+//!
+//! value *= 5;
+//! assert_eq!(value, 4);
+//! assert_eq!(value.wraps(), 7);
+//! ```
+//!
 //! # Iteration
 //! I originally created `ModNum` to facilitate cyclic iteration through a fixed-size array from an
 //! arbitrary starting point in a no_std environment. Its double-ended iterator facilitates
@@ -446,6 +470,8 @@
 //! let solution = ModNum::<i128>::chinese_remainder_system(values);
 //! assert_eq!(solution.unwrap().a(), 762009420388013796);
 //! ```
+
+extern crate alloc;
 
 use core::cmp::Ordering;
 use core::mem;
@@ -893,56 +919,19 @@ impl <N: NumType> WrapCountNum<N> {
         WrapCountNum { num, modulo, wraps }
     }
 
+    pub fn with_wraps(&self, a: N, wraps: N) -> Self {
+        WrapCountNum {num: a, modulo: self.modulo, wraps}
+    }
+
     /// Returns the total number of wraparounds counted when calculating this value.
     pub fn wraps(&self) -> N {
         self.wraps
     }
 }
 
-impl <N: NumType + Signed> WrapCountNum<N> {
-    /// Returns an iterator starting at **a (mod m)** and ending at **a - 1 (mod m)**
-    pub fn iter(&self) -> ModNumIterator<N,Self> {
-        ModNumIterator::new(*self)
-    }
-}
-
-derive_core_modulo_arithmetic! {
-    WrapCountNum<N> {}
-}
-
-impl <N: NumType +> Display for WrapCountNum<N> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{} (mod {}) (wrap {})", self.a(), self.m(), self.wraps)
-    }
-}
-
-impl <N: NumType + Signed> Neg for WrapCountNum<N> {
-    type Output = Self;
-
-    fn neg(self) -> Self::Output {
-        WrapCountNum {num: -self.num, modulo: self.modulo, wraps: -self.wraps}
-    }
-}
-
-impl <N: NumType + Signed> Sub<N> for WrapCountNum<N> {
-    type Output = Self;
-
-    fn sub(self, rhs: N) -> Self::Output {
-        self.with(self.num - rhs)
-    }
-}
-
-impl <N: NumType + Signed> Sub<WrapCountNum<N>> for WrapCountNum<N> {
-    type Output = Self;
-
-    fn sub(self, rhs: WrapCountNum<N>) -> Self::Output {
-        self - rhs.a()
-    }
-}
-
 macro_rules! derive_wrap_assign {
-    ($name:ty, $implname:ty, $rhs_type:ty, $methodname:ident {$symbol:tt} {$($num_type_suffix:ident)?} {$($unwrap:tt)*}) => {
-        impl <N: NumType + $($num_type_suffix)?> $implname for $name {
+    ($name:ty, $implname:ty, $rhs_type:ty, $methodname:ident {$symbol:tt} {$($generic:tt)*} {$($num_type_suffix:ident)?} {$($unwrap:tt)*}) => {
+        impl <N: NumType + $($num_type_suffix)?,$($generic)*> $implname for $name {
             fn $methodname(&mut self, rhs: $rhs_type) {
                 let result = (*self $symbol rhs)$($unwrap)*;
                 self.num = result.num;
@@ -952,42 +941,136 @@ macro_rules! derive_wrap_assign {
     }
 }
 
-derive_wrap_assign! {
-    WrapCountNum<N>, AddAssign<N>, N, add_assign {+} {} {}
+macro_rules! derive_wrap_modulo_arithmetic {
+    ($name:ty {$($generic:tt)*}) => {
+        derive_core_modulo_arithmetic! {$name {$($generic)*}}
+
+        impl <N: NumType + Signed,$($generic)*> $name {
+            /// Returns an iterator starting at **a (mod m)** and ending at **a - 1 (mod m)**
+            pub fn iter(&self) -> ModNumIterator<N,Self> {
+                ModNumIterator::new(*self)
+            }
+        }
+
+        impl <N: NumType,$($generic)*> Display for $name {
+            fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+                write!(f, "{} (mod {}) (wrap {})", self.a(), self.m(), self.wraps)
+            }
+        }
+
+        impl <N: NumType + Signed,$($generic)*> Neg for $name {
+            type Output = Self;
+
+            fn neg(self) -> Self::Output {
+                self.with_wraps(-self.num, -self.wraps)
+            }
+        }
+
+        impl <N: NumType + Signed,$($generic)*> Sub<N> for $name {
+            type Output = Self;
+
+            fn sub(self, rhs: N) -> Self::Output {
+                self.with(self.num - rhs)
+            }
+        }
+
+        impl <N: NumType + Signed,$($generic)*> Sub<$name> for $name {
+            type Output = Self;
+
+            fn sub(self, rhs: $name) -> Self::Output {
+                self - rhs.a()
+            }
+        }
+
+        derive_wrap_assign! {
+            $name, AddAssign<N>, N, add_assign {+} {$($generic)*} {} {}
+        }
+
+        derive_wrap_assign! {
+            $name, AddAssign<$name>, $name, add_assign {+} {$($generic)*} {} {}
+        }
+
+        derive_wrap_assign! {
+            $name, SubAssign<N>, N, sub_assign {-} {$($generic)*} {Signed} {}
+        }
+
+        derive_wrap_assign! {
+            $name, SubAssign<$name>, $name, sub_assign {-} {$($generic)*} {Signed} {}
+        }
+
+        derive_wrap_assign! {
+            $name, MulAssign<N>, N, mul_assign {*} {$($generic)*} {} {}
+        }
+
+        derive_wrap_assign! {
+            $name, MulAssign<$name>, $name, mul_assign {*} {$($generic)*} {} {}
+        }
+
+        derive_wrap_assign! {
+            $name, DivAssign<N>, N, div_assign {/} {$($generic)*} {Signed} {.unwrap()}
+        }
+
+        derive_wrap_assign! {
+            $name, DivAssign<$name>, $name, div_assign {/} {$($generic)*} {Signed} {.unwrap()}
+        }
+    }
 }
 
-derive_wrap_assign! {
-    WrapCountNum<N>, AddAssign<WrapCountNum<N>>, WrapCountNum<N>, add_assign {+} {} {}
+derive_wrap_modulo_arithmetic! {
+    WrapCountNum<N> {}
 }
 
-derive_wrap_assign! {
-    WrapCountNum<N>, SubAssign<N>, N, sub_assign {-} {Signed} {}
+#[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd,Hash)]
+pub struct WrapCountNumC<N: FromPrimitive, const M: usize> {
+    num: N, wraps: N
 }
 
-derive_wrap_assign! {
-    WrapCountNum<N>, SubAssign<WrapCountNum<N>>, WrapCountNum<N>, sub_assign {-} {Signed} {}
+impl <N:NumType, const M: usize> MNum for WrapCountNumC<N,M> {
+    type Num = N;
+
+    fn a(&self) -> Self::Num {
+        self.num
+    }
+
+    fn m(&self) -> Self::Num {
+        N::from_usize(M).unwrap()
+    }
+
+    fn with(&self, new_a: Self::Num) -> Self {
+        Self::new(new_a)
+    }
 }
 
-derive_wrap_assign! {
-    WrapCountNum<N>, MulAssign<N>, N, mul_assign {*} {} {}
+impl <N: NumType, const M: usize> WrapCountNumC<N,M> {
+    /// Creates a new integer **a (mod m)**, storing the number of wraparounds
+    /// of **a** as well.
+    pub fn new(a: N) -> Self {
+        let mut result = WrapCountNumC {num: a, wraps: N::zero()};
+        let (wraps, num) = a.div_mod_floor(&result.m());
+        result.num = num;
+        result.wraps = wraps;
+        result
+    }
+
+    pub fn with_wraps(&self, a: N, wraps: N) -> Self {
+        WrapCountNumC {num: a, wraps}
+    }
+
+    /// Returns the total number of wraparounds counted when calculating this value.
+    pub fn wraps(&self) -> N {
+        self.wraps
+    }
 }
 
-derive_wrap_assign! {
-    WrapCountNum<N>, MulAssign<WrapCountNum<N>>, WrapCountNum<N>, mul_assign {*} {} {}
-}
-
-derive_wrap_assign! {
-    WrapCountNum<N>, DivAssign<N>, N, div_assign {/} {Signed} {.unwrap()}
-}
-
-derive_wrap_assign! {
-    WrapCountNum<N>, DivAssign<WrapCountNum<N>>, WrapCountNum<N>, div_assign {/} {Signed} {.unwrap()}
+derive_wrap_modulo_arithmetic! {
+    WrapCountNumC<N,M> {const M: usize}
 }
 
 #[cfg(test)]
 mod tests {
     extern crate alloc;
     use alloc::vec;
+    use alloc::vec::Vec;
     use super::*;
 
     #[test]
@@ -1047,7 +1130,8 @@ mod tests {
                     assert_ne!(m, c + i);
                 }
             }
-        }    }
+        }
+    }
 
     #[test]
     fn test_iter_up() {
@@ -1057,6 +1141,16 @@ mod tests {
     #[test]
     fn test_iter_down() {
         assert_eq!(vec![1, 0, 4, 3, 2], ModNum::new(2, 5).iter().rev().map(|m: ModNum<usize>| m.a()).collect::<Vec<usize>>())
+    }
+
+    #[test]
+    fn test_iter_up_w() {
+        assert_eq!(vec![2, 3, 4, 0, 1], WrapCountNumC::<isize,5>::new(2).iter().map(|m: WrapCountNumC<isize,5>| m.a()).collect::<Vec<isize>>())
+    }
+
+    #[test]
+    fn test_iter_down_w() {
+        assert_eq!(vec![1, 0, 4, 3, 2], WrapCountNumC::<isize,5>::new(2).iter().rev().map(|m: WrapCountNumC<isize,5>| m.a()).collect::<Vec<isize>>())
     }
 
     #[test]

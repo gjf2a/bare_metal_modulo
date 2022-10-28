@@ -20,14 +20,16 @@ store the quotient in addition to the remainder, we have a count of the number o
 value had to "wrap around" during the calculation.
 
 For example, if we start with **8 (mod 17)** and add **42**, the result is **16 (mod 17)** with
-a wraparound of **2**. `WrapCountNum` objects store this wraparound value and make it available. 
+a wraparound of **2**. `WrapCountNum` and `WrapCountNumC` objects store this wraparound value 
+and make it available. 
 
-Note that `ModNum`, `ModNumC`, and `WrapCountNum` are not designed to work with arbitrary-length 
-integers, as they require their integer type to implement the `Copy` trait.
+Note that `ModNum`, `ModNumC`, `WrapCountNum`, and `WrapCountNumC` are not designed to work with 
+arbitrary-length integers, as they require their integer type to implement the `Copy` trait.
 
 # Updates
 * **1.1.0**: 
-  * Added `WrapCountNum`, a variant of `ModNum` that tracks wraparounds.
+  * Added `WrapCountNum` and `WrapCountNumC`, variants of `ModNum`/`ModNumC` that track wraparounds.
+  * Moved `extern crate alloc;`, inadvertently added at the top level, to `mod tests`.
 * **1.0.0**:
   * Updated `ModNumC` to support `.pow()`, `.inverse()`, and division. 
   * Refactored as much implementation as possible into the `MNum` trait and some internal macros.
