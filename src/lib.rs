@@ -471,8 +471,6 @@
 //! assert_eq!(solution.unwrap().a(), 762009420388013796);
 //! ```
 
-extern crate alloc;
-
 use core::cmp::Ordering;
 use core::mem;
 use num::{Integer, Signed, NumCast, FromPrimitive, Zero, One};
