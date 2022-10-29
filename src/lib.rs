@@ -27,8 +27,7 @@
 //! a wraparound of **2**.
 //!
 //! `WrapCountNum`/`WrapCountNumC` objects store this wraparound value and make it available. They
-//! only support subtraction and iteration with signed values, and they do not have the `pow()`
-//! operator defined.
+//! only support subtraction and iteration with `Signed` values such as `isize` and `i64`.
 //!
 //! This library was originally developed to facilitate bidirectional navigation through fixed-size
 //! arrays at arbitrary starting points. This is facilitated by a double-ended iterator that
@@ -284,6 +283,29 @@
 //! assert!(n > 0);
 //! ```
 //!
+//! # Iteration
+//! I originally created `ModNum` to facilitate cyclic iteration through a fixed-size array from an
+//! arbitrary starting point in a `no_std` environment. Its double-ended iterator facilitates
+//! both forward and backward iteration.
+//!
+//! ```
+//! use bare_metal_modulo::*;
+//!
+//! let forward: Vec<usize> = ModNum::new(2, 5).iter().map(|mn| mn.a()).collect();
+//! assert_eq!(forward, vec![2, 3, 4, 0, 1]);
+//!
+//! let reverse: Vec<usize> = ModNum::new(2, 5).iter().rev().map(|mn| mn.a()).collect();
+//! assert_eq!(reverse, vec![1, 0, 4, 3, 2]);
+//!
+//! let m: ModNumC<usize,5> = ModNumC::new(2);
+//! let forward: Vec<usize> = m.iter().map(|mn| mn.a()).collect();
+//! assert_eq!(forward, vec![2, 3, 4, 0, 1]);
+//!
+//! let m: ModNumC<usize,5> = ModNumC::new(2);
+//! let reverse: Vec<usize> = m.iter().rev().map(|mn| mn.a()).collect();
+//! assert_eq!(reverse, vec![1, 0, 4, 3, 2]);
+//! ```
+//!
 //! # Counting Wraps
 //!
 //! Modular numbers represent the remainder of an integer when divided by the modulo. If we also
@@ -346,6 +368,25 @@
 //! assert_eq!(value.wraps(), 3);
 //! ```
 //!
+//! The `.pow_assign()` method enables wrap tracking when exponentiating.
+//!
+//! ```
+//! use bare_metal_modulo::*;
+//!
+//! let mut value = WrapCountNum::new(4, 17);
+//! value.pow_assign(3);
+//! assert_eq!(value, 13);
+//! assert_eq!(value.wraps(), 3);
+//!
+//! value += 6;
+//! assert_eq!(value, 2);
+//! assert_eq!(value.wraps(), 4);
+//!
+//! value.pow_assign(5);
+//! assert_eq!(value, 15);
+//! assert_eq!(value.wraps(), 5);
+//! ```
+//!
 //! Subtraction causes the wrap count to decrease. To simplify the implementation, `WrapCountNum`
 //! only defines subtraction on `Signed` numerical types.
 //!
@@ -392,29 +433,6 @@
 //! assert_eq!(value.wraps(), 7);
 //! ```
 //!
-//! # Iteration
-//! I originally created `ModNum` to facilitate cyclic iteration through a fixed-size array from an
-//! arbitrary starting point in a no_std environment. Its double-ended iterator facilitates
-//! both forward and backward iteration.
-//!
-//! ```
-//! use bare_metal_modulo::*;
-//!
-//! let forward: Vec<usize> = ModNum::new(2, 5).iter().map(|mn| mn.a()).collect();
-//! assert_eq!(forward, vec![2, 3, 4, 0, 1]);
-//!
-//! let reverse: Vec<usize> = ModNum::new(2, 5).iter().rev().map(|mn| mn.a()).collect();
-//! assert_eq!(reverse, vec![1, 0, 4, 3, 2]);
-//!
-//! let m: ModNumC<usize,5> = ModNumC::new(2);
-//! let forward: Vec<usize> = m.iter().map(|mn| mn.a()).collect();
-//! assert_eq!(forward, vec![2, 3, 4, 0, 1]);
-//!
-//! let m: ModNumC<usize,5> = ModNumC::new(2);
-//! let reverse: Vec<usize> = m.iter().rev().map(|mn| mn.a()).collect();
-//! assert_eq!(reverse, vec![1, 0, 4, 3, 2]);
-//! ```
-//!
 //! # Hash/BTree keys
 //! `ModNum` and `ModNumC` objects implement the `Ord` and `Hash` traits, and therefore can
 //! be included in `HashSet` and `BTreeSet` collections and serve
@@ -454,7 +472,7 @@
 //! an iterator, and the second example retrieves the system from a `Vec`.
 //!
 //! Note that the solution value can rapidly become large, as shown in the third example. I
-//! recommend using **i128**, so as to maximize the set of solvable equations given this library's
+//! recommend using **i128**, so as to maximize the set of solvable equations given this crate's
 //! constraint of using **Copy** integers only. While the solution to the third example is
 //! representable as an **i64**, some of the intermediate multiplications will overflow unless
 //! **i128** is used.
@@ -702,6 +720,8 @@ macro_rules! derive_core_modulo_arithmetic {
             }
         }
 
+        /// Exponentiates safely with negative exponents - if the inverse is undefined, it returns
+        /// `None`, otherwise it returns `Some(self.pow(rhs))`.
         impl <N: NumType + Signed,$($generic)*> $name {
             pub fn pow_signed(&self, rhs: N) -> Option<Self> {
                 if rhs < N::zero() {
@@ -944,15 +964,33 @@ macro_rules! derive_wrap_modulo_arithmetic {
     ($name:ty {$($generic:tt)*}) => {
         derive_core_modulo_arithmetic! {$name {$($generic)*}}
 
+        impl <N: NumType,$($generic)*> $name {
+            /// Returns the total number of wraparounds counted when calculating this value.
+            pub fn wraps(&self) -> N {
+                self.wraps
+            }
+
+            pub fn pow_assign(&mut self, rhs: N) {
+                let result = self.pow(rhs);
+                self.num = result.num;
+                self.wraps += result.wraps;
+            }
+        }
+
         impl <N: NumType + Signed,$($generic)*> $name {
             /// Returns an iterator starting at **a (mod m)** and ending at **a - 1 (mod m)**
             pub fn iter(&self) -> ModNumIterator<N,Self> {
                 ModNumIterator::new(*self)
             }
 
-            /// Returns the total number of wraparounds counted when calculating this value.
-            pub fn wraps(&self) -> N {
-                self.wraps
+            /// Computes and assigns to `self` the value `self.pow_signed(rhs)`. If the result
+            /// is undefined due to `rhs` not having a defined inverse, `self` will be unchanged.
+            pub fn pow_assign_signed(&mut self, rhs: N) {
+                let result = self.pow_signed(rhs);
+                if let Some(result) = result {
+                    self.num = result.num;
+                    self.wraps += result.wraps;
+                }
             }
         }
 
@@ -1281,5 +1319,16 @@ mod tests {
         for (exp, result) in (2..).map(|n| -n).zip([4, 2, 1, 3].iter().cycle()).take(20) {
             assert_eq!(m.pow_signed(exp).unwrap().a(), *result);
         }
+    }
+
+    #[test]
+    fn test_wrapping() {
+        let mut w: WrapCountNumC<usize, 5> = WrapCountNumC::new(4);
+        w *= 4;
+        assert_eq!(w, 1);
+        assert_eq!(w.wraps(), 3);
+        w += 9;
+        assert_eq!(w, 0);
+        assert_eq!(w.wraps(), 5);
     }
 }

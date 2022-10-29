@@ -27,6 +27,8 @@ Note that `ModNum`, `ModNumC`, `WrapCountNum`, and `WrapCountNumC` are not desig
 arbitrary-length integers, as they require their integer type to implement the `Copy` trait.
 
 # Updates
+* **1.1.2**:
+  * `WrapCountNum` and `WrapCountNumC` now support `.pow()`.  
 * **1.1.1**:
   * Moved `extern crate alloc;`, inadvertently added at the top level, to `mod tests`.
 * **1.1.0**: 
