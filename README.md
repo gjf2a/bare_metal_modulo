@@ -57,8 +57,7 @@ arbitrary-length integers, as they require their integer type to implement the `
   * Added some more documentation tests for `ModNumC`.
 * **0.7**:
   * Added `ModNumC`, which uses [const generics](https://rust-lang.github.io/rfcs/2000-const-generics.html)
-    to enable compile-time checking of compatible modulo. Its functionality is a proper
-    subset of `ModNum`.
+    to enable compile-time checking of compatible modulo. 
   * Added `MNum` trait to allow `ModNumIterator` to work with both `ModNum` and `ModNumC`.
     **Note**: To use the `.a()` and `.m()` methods, be sure to import `MNum` (or just `use bare_metal_modulo::*;`)
 * **0.6**:
@@ -71,6 +70,8 @@ arbitrary-length integers, as they require their integer type to implement the `
 * **0.4**:
   * Added `ModNum` as a right-hand side option for arithmetic operators.
   * Implemented `Display` for `ModNum` objects.
-* **0.3**: Added division and modular exponentiation with negative exponents.
-* **0.2**: Added modular exponentiation and inverse.
+* **0.3**: 
+  * Added division and modular exponentiation with negative exponents.
+* **0.2**: 
+  * Added modular exponentiation and inverse.
     
