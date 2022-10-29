@@ -920,11 +920,6 @@ impl <N: NumType> WrapCountNum<N> {
     pub fn with_wraps(&self, a: N, wraps: N) -> Self {
         WrapCountNum {num: a, modulo: self.modulo, wraps}
     }
-
-    /// Returns the total number of wraparounds counted when calculating this value.
-    pub fn wraps(&self) -> N {
-        self.wraps
-    }
 }
 
 macro_rules! derive_wrap_assign {
@@ -947,6 +942,11 @@ macro_rules! derive_wrap_modulo_arithmetic {
             /// Returns an iterator starting at **a (mod m)** and ending at **a - 1 (mod m)**
             pub fn iter(&self) -> ModNumIterator<N,Self> {
                 ModNumIterator::new(*self)
+            }
+
+            /// Returns the total number of wraparounds counted when calculating this value.
+            pub fn wraps(&self) -> N {
+                self.wraps
             }
         }
 
@@ -1052,11 +1052,6 @@ impl <N: NumType, const M: usize> WrapCountNumC<N,M> {
 
     pub fn with_wraps(&self, a: N, wraps: N) -> Self {
         WrapCountNumC {num: a, wraps}
-    }
-
-    /// Returns the total number of wraparounds counted when calculating this value.
-    pub fn wraps(&self) -> N {
-        self.wraps
     }
 }
 
