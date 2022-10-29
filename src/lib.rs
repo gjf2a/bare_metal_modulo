@@ -293,7 +293,8 @@
 //! For example, if we start with **8 (mod 17)** and add **42**, the result is **16 (mod 17)** with
 //! a wraparound of **2**.
 //!
-//! `WrapCountNum` objects store this wraparound value and make it available.
+//! `WrapCountNum` objects store this wraparound value and make it available. It is tracked through
+//! both `+=` and `*=` for all supported numeric types.
 //!
 //! ```
 //! use bare_metal_modulo::*;
@@ -321,6 +322,7 @@
 //!
 //! ```
 //! use bare_metal_modulo::*;
+//! use num::traits::Pow;
 //!
 //! let mut value = WrapCountNum::new(8, 17);
 //! value = value + 42;
@@ -335,8 +337,12 @@
 //! assert_eq!(value, 11);
 //! assert_eq!(value.wraps(), 0);
 //!
-//! value *= 5;
+//! value = value * 5;
 //! assert_eq!(value, 4);
+//! assert_eq!(value.wraps(), 3);
+//!
+//! value = value.pow(3);
+//! assert_eq!(value, 13);
 //! assert_eq!(value.wraps(), 3);
 //! ```
 //!
@@ -664,6 +670,47 @@ macro_rules! derive_core_modulo_arithmetic {
                 self / rhs.a()
             }
         }
+
+        impl <N: NumType,$($generic)*> Pow<N> for $name {
+            type Output = Self;
+
+            /// Returns a^rhs (mod m), for rhs >= 0.
+            /// Implements efficient modular exponentiation by [repeated squaring](https://byorgey.wordpress.com/2020/02/15/competitive-programming-in-haskell-modular-arithmetic-part-1/).
+            ///
+            /// Panics if rhs < 0. If negative exponents are possible, use .pow_signed()
+            fn pow(self, rhs: N) -> Self::Output {
+                if rhs < N::zero() {
+                    panic!("Negative exponentiation undefined for ModNum.pow(). Try .pow_signed() instead.")
+                } else if rhs == N::zero() {
+                    self.with(N::one())
+                } else {
+                    let mut r = self.pow(rhs.div_floor(&(N::one() + N::one())));
+                    r *= r;
+                    if rhs.is_odd() {
+                        r *= self;
+                    }
+                    r
+                }
+            }
+        }
+
+        impl <N: NumType,$($generic)*> Pow<$name> for $name {
+            type Output = Self;
+
+            fn pow(self, rhs: Self) -> Self::Output {
+                self.pow(rhs.a())
+            }
+        }
+
+        impl <N: NumType + Signed,$($generic)*> $name {
+            pub fn pow_signed(&self, rhs: N) -> Option<Self> {
+                if rhs < N::zero() {
+                    self.pow(-rhs).inverse()
+                } else {
+                    Some(self.pow(rhs))
+                }
+            }
+        }
     }
 }
 
@@ -753,47 +800,6 @@ macro_rules! derive_modulo_arithmetic {
                     self.with(N::zero())
                 } else {
                     *self - *v
-                }
-            }
-        }
-
-        impl <N: NumType,$($generic)*> Pow<N> for $name {
-            type Output = Self;
-
-            /// Returns a^rhs (mod m), for rhs >= 0.
-            /// Implements efficient modular exponentiation by [repeated squaring](https://byorgey.wordpress.com/2020/02/15/competitive-programming-in-haskell-modular-arithmetic-part-1/).
-            ///
-            /// Panics if rhs < 0. If negative exponents are possible, use .pow_signed()
-            fn pow(self, rhs: N) -> Self::Output {
-                if rhs < N::zero() {
-                    panic!("Negative exponentiation undefined for ModNum.pow(). Try .pow_signed() instead.")
-                } else if rhs == N::zero() {
-                    self.with(N::one())
-                } else {
-                    let r = self.pow(rhs.div_floor(&(N::one() + N::one())));
-                    let mut sq = r * r;
-                    if rhs.is_odd() {
-                        sq = sq * self;
-                    }
-                    sq
-                }
-            }
-        }
-
-        impl <N: NumType,$($generic)*> Pow<$name> for $name {
-            type Output = Self;
-
-            fn pow(self, rhs: Self) -> Self::Output {
-                self.pow(rhs.a())
-            }
-        }
-
-        impl <N: NumType + Signed,$($generic)*> $name {
-            pub fn pow_signed(&self, rhs: N) -> Option<Self> {
-                if rhs < N::zero() {
-                    self.pow(-rhs).inverse()
-                } else {
-                    Some(self.pow(rhs))
                 }
             }
         }
