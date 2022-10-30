@@ -1103,6 +1103,39 @@ derive_wrap_modulo_arithmetic! {
     WrapCountNumC<N,M> {const M: usize}
 }
 
+#[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd,Hash)]
+pub struct OffsetNumC<N: FromPrimitive, const M: usize, const O: isize> {
+    num: N
+}
+
+impl <N:NumType, const M: usize, const O: isize> MNum for OffsetNumC<N,M,O> {
+    type Num = N;
+
+    fn a(&self) -> Self::Num {
+        self.num + N::from_isize(O).unwrap()
+    }
+
+    fn m(&self) -> Self::Num {
+        N::from_usize(M).unwrap()
+    }
+
+    fn with(&self, new_a: Self::Num) -> Self {
+        Self::new(new_a)
+    }
+}
+
+impl <N:NumType, const M: usize, const O: isize> OffsetNumC<N,M,O> {
+    pub fn new(num: N) -> Self {
+        let mut result = OffsetNumC {num: num - N::from_isize(O).unwrap()};
+        result.num = result.num.mod_floor(&result.m());
+        result
+    }
+}
+
+derive_modulo_arithmetic! {
+    OffsetNumC<N,M,O> {const M: usize, const O: isize}
+}
+
 #[cfg(test)]
 mod tests {
     extern crate alloc;
@@ -1330,5 +1363,17 @@ mod tests {
         w += 9;
         assert_eq!(w, 0);
         assert_eq!(w.wraps(), 5);
+    }
+
+    #[test]
+    fn test_offset() {
+        let mut off: OffsetNumC<i16, 7, 5> = OffsetNumC::new(3);
+        assert_eq!(off.a(), 10);
+        off += 1;
+        assert_eq!(off.a(), 11);
+        off += 1;
+        assert_eq!(off.a(), 5);
+        off += 1;
+        assert_eq!(off.a(), 6);
     }
 }
