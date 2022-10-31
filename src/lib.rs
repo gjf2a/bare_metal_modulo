@@ -1367,7 +1367,7 @@ mod tests {
 
     #[test]
     fn test_offset() {
-        let mut off: OffsetNumC<i16, 7, 5> = OffsetNumC::new(3);
+        let mut off = OffsetNumC::<i16, 7, 5>::new(3);
         assert_eq!(off.a(), 10);
         off += 1;
         assert_eq!(off.a(), 11);
