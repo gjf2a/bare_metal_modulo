@@ -460,7 +460,34 @@
 //! # Modular ranges rooted elsewhere than zero
 //!
 //! Occasionally of use is the ability to represent a modular range of values starting elsewhere than zero. To address
-//! this situation, `OffsetNumC` is provided. It has three generic parameters:
+//! this situation, `OffsetNum` and `OffsetNumC` are provided. Both support addition, subtraction, and iteration in a
+//! manner similar to the other types.
+//!
+//! `OffsetNum` can be created directly or from a `RangeInclusive`:
+//!
+//! ```
+//! use bare_metal_modulo::*;
+//!
+//! let mut off = OffsetNum::<usize>::from(1..=10);
+//! for i in 1..=10 {
+//!     assert_eq!(off.a(), i);    
+//!     off += 1;
+//! }
+//! assert_eq!(off.a(), 1);
+//! ```
+//!
+//! Negative offsets are fine:
+//!
+//! ```
+//! use bare_metal_modulo::*;
+//!
+//! let mut off = OffsetNum::<isize>::new(-4, 3, -6);
+//! assert_eq!(off.a(), -4);
+//! off += 1;
+//! assert_eq!(off.a(), -6);
+//! ```
+//!
+//! `OffsetNumC` has three generic parameters:
 //! * Underlying integer type
 //! * Number of values in the range
 //! * Starting offset for the range
@@ -518,7 +545,9 @@
 use core::cmp::Ordering;
 use core::fmt::{Debug, Display, Formatter};
 use core::mem;
-use core::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use core::ops::{
+    Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, RangeInclusive, Sub, SubAssign,
+};
 use num::traits::{Pow, SaturatingAdd, SaturatingSub};
 use num::{FromPrimitive, Integer, NumCast, One, Signed, Zero};
 
@@ -1209,11 +1238,19 @@ fn offset_init<N: NumType>(num: N, modulo: N, offset: N) -> N {
 impl<N: NumType> OffsetNum<N> {
     pub fn new(num: N, modulo: N, offset: N) -> Self {
         let num = offset_init(num, modulo, offset);
-        OffsetNum {
+        let mut result = OffsetNum {
             num,
             modulo,
             offset,
-        }
+        };
+        result.num = result.num.mod_floor(&result.m());
+        result
+    }
+}
+
+impl<N: NumType> From<RangeInclusive<N>> for OffsetNum<N> {
+    fn from(r: RangeInclusive<N>) -> Self {
+        Self::new(*r.start(), *r.end() - *r.start() + N::one(), *r.start())
     }
 }
 
@@ -1576,5 +1613,27 @@ mod tests {
             let bigoff = OffsetNumC::<usize, 5, 502>::new(test);
             assert_eq!(bigoff.a(), 502);
         }
+    }
+
+    #[test]
+    fn test_offset_3() {
+        let mut off = OffsetNum::<usize>::from(1..=10);
+        for i in 1..=10 {
+            assert_eq!(off.a(), i);
+            off += 1;
+            println!("{off:?}");
+        }
+        assert_eq!(off.a(), 1);
+    }
+
+    #[test]
+    fn test_offset_4() {
+        let mut off = OffsetNumC::<usize, 10, 1>::new(1);
+        for i in 1..=10 {
+            assert_eq!(off.a(), i);
+            off += 1;
+            println!("{off:?}");
+        }
+        assert_eq!(off.a(), 1);
     }
 }
