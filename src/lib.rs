@@ -456,18 +456,18 @@
 //!     assert!(set.contains(m));
 //! }
 //! ```
-//! 
+//!
 //! # Modular ranges rooted elsewhere than zero
-//! 
+//!
 //! Occasionally of use is the ability to represent a modular range of values starting elsewhere than zero. To address
 //! this situation, `OffsetNumC` is provided. It has three generic parameters:
 //! * Underlying integer type
 //! * Number of values in the range
 //! * Starting offset for the range
-//! 
+//!
 //! ```
 //! use bare_metal_modulo::*;
-//! 
+//!
 //! let mut off = OffsetNumC::<i16, 7, 5>::new(5);
 //! assert_eq!(off.a(), 5);
 //! for i in 0..7 {
@@ -516,18 +516,18 @@
 //! ```
 
 use core::cmp::Ordering;
-use core::mem;
-use num::{Integer, Signed, NumCast, FromPrimitive, Zero, One};
-use core::ops::{Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Neg, Div, DivAssign};
-use num::traits::{Pow, SaturatingAdd, SaturatingSub};
 use core::fmt::{Debug, Display, Formatter};
+use core::mem;
+use core::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use num::traits::{Pow, SaturatingAdd, SaturatingSub};
+use num::{FromPrimitive, Integer, NumCast, One, Signed, Zero};
 
 use trait_set::trait_set;
 trait_set! {
     pub trait NumType = Copy + Clone + Integer + Display + Debug + NumCast + FromPrimitive + AddAssign + SubAssign + MulAssign + DivAssign;
 }
 
-pub trait MNum : Copy + Eq + PartialEq {
+pub trait MNum: Copy + Eq + PartialEq {
     type Num: NumType;
 
     fn a(&self) -> Self::Num;
@@ -547,7 +547,10 @@ pub trait MNum : Copy + Eq + PartialEq {
     /// Given two integers **a** and **b**, it returns three integer values:
     /// - Greatest Common Divisor (**g**) of **a** and **b**
     /// - Two additional values **x** and **y**, where **ax + by = g**
-    fn egcd(a: Self::Num, b: Self::Num) -> (Self::Num,Self::Num,Self::Num) where Self::Num: Signed {
+    fn egcd(a: Self::Num, b: Self::Num) -> (Self::Num, Self::Num, Self::Num)
+    where
+        Self::Num: Signed,
+    {
         if b == Self::Num::zero() {
             (a.signum() * a, a.signum(), Self::Num::zero())
         } else {
@@ -564,20 +567,27 @@ pub trait MNum : Copy + Eq + PartialEq {
     /// Then **m * m.inverse().unwrap().a()** is congruent to **1 (mod m)**.
     ///
     /// Returns None if **a** and **m** are not relatively prime.
-    fn inverse(&self) -> Option<Self> where Self::Num: Signed {
+    fn inverse(&self) -> Option<Self>
+    where
+        Self::Num: Signed,
+    {
         let (g, _, inv) = Self::egcd(self.m(), self.a());
-        if g == Self::Num::one() {Some(self.with(inv))} else {None}
+        if g == Self::Num::one() {
+            Some(self.with(inv))
+        } else {
+            None
+        }
     }
 }
 
 /// Represents an integer **a (mod m)**
-#[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd,Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ModNum<N> {
     num: N,
-    modulo: N
+    modulo: N,
 }
 
-impl <N:NumType> MNum for ModNum<N> {
+impl<N: NumType> MNum for ModNum<N> {
     type Num = N;
 
     fn a(&self) -> N {
@@ -593,20 +603,22 @@ impl <N:NumType> MNum for ModNum<N> {
     }
 }
 
-impl <N: NumType> ModNum<N> {
+impl<N: NumType> ModNum<N> {
     /// Creates a new integer **a (mod m)**
     pub fn new(a: N, m: N) -> Self {
-        ModNum { num: a.mod_floor(&m), modulo: m }
+        ModNum {
+            num: a.mod_floor(&m),
+            modulo: m,
+        }
     }
 
     /// Returns an iterator starting at **a (mod m)** and ending at **a - 1 (mod m)**
-    pub fn iter(&self) -> ModNumIterator<N,Self> {
+    pub fn iter(&self) -> ModNumIterator<N, Self> {
         ModNumIterator::new(*self)
     }
 }
 
-impl <N: NumType + Signed> ModNum<N> {
-
+impl<N: NumType + Signed> ModNum<N> {
     /// Solves a pair of modular equations using the [Chinese Remainder Theorem](https://byorgey.wordpress.com/2020/03/03/competitive-programming-in-haskell-modular-arithmetic-part-2/).
     ///
     /// This is my translation into Rust of [Brent Yorgey's Haskell implementation](https://byorgey.wordpress.com/2020/03/03/competitive-programming-in-haskell-modular-arithmetic-part-2/).
@@ -628,9 +640,12 @@ impl <N: NumType + Signed> ModNum<N> {
     /// - Returns **Some(element)** if the iterator has only one element.
     /// - Returns **Some(solution)** if the iterator has two or more elements, where the solution is
     ///   found by repeatedly calling **ModNum::chinese_remainder()**.
-    pub fn chinese_remainder_system<I:Iterator<Item=ModNum<N>>>(mut modnums: I) -> Option<ModNum<N>> {
-        modnums.next().map(|start_num|
-            modnums.fold(start_num, |a, b| a.chinese_remainder(b)))
+    pub fn chinese_remainder_system<I: Iterator<Item = ModNum<N>>>(
+        mut modnums: I,
+    ) -> Option<ModNum<N>> {
+        modnums
+            .next()
+            .map(|start_num| modnums.fold(start_num, |a, b| a.chinese_remainder(b)))
     }
 }
 
@@ -673,7 +688,7 @@ macro_rules! derive_basic_modulo_arithmetic {
             fn add(self, rhs: Self) -> Self::Output {
                 self + rhs.a()
             }
-        }        
+        }
     }
 }
 
@@ -871,19 +886,32 @@ derive_modulo_arithmetic! {
 /// A double-ended iterator that starts with the ModNum upon which it is invoked,
 /// making a complete traversal of the elements in that ModNum's ring.
 #[derive(Debug)]
-pub struct ModNumIterator<N:NumType,M:MNum<Num=N> + Add<N,Output=M> + Sub<N,Output=M>> {
+pub struct ModNumIterator<N: NumType, M: MNum<Num = N> + Add<N, Output = M> + Sub<N, Output = M>> {
     next: M,
     next_back: M,
-    finished: bool
+    finished: bool,
 }
 
-impl <N: NumType,M:MNum<Num=N> + Add<N,Output=M> + Sub<N,Output=M>> ModNumIterator<N,M> {
+impl<N: NumType, M: MNum<Num = N> + Add<N, Output = M> + Sub<N, Output = M>> ModNumIterator<N, M> {
     pub fn new(mn: M) -> Self {
-        ModNumIterator {next: mn, next_back: mn - N::one(), finished: false}
+        ModNumIterator {
+            next: mn,
+            next_back: mn - N::one(),
+            finished: false,
+        }
     }
 }
 
-fn update<N: NumType, M:MNum<Num=N> + Add<N,Output=M> + Sub<N,Output=M>, F:Fn(&M,N)->M>(finished: &mut bool, update: &mut M, updater: F, target: M) -> Option<<ModNumIterator<N,M> as Iterator>::Item> {
+fn update<
+    N: NumType,
+    M: MNum<Num = N> + Add<N, Output = M> + Sub<N, Output = M>,
+    F: Fn(&M, N) -> M,
+>(
+    finished: &mut bool,
+    update: &mut M,
+    updater: F,
+    target: M,
+) -> Option<<ModNumIterator<N, M> as Iterator>::Item> {
     if *finished {
         None
     } else {
@@ -896,27 +924,41 @@ fn update<N: NumType, M:MNum<Num=N> + Add<N,Output=M> + Sub<N,Output=M>, F:Fn(&M
     }
 }
 
-impl <N: NumType, M:MNum<Num=N> + Add<N,Output=M> + Sub<N,Output=M>> Iterator for ModNumIterator<N,M> {
+impl<N: NumType, M: MNum<Num = N> + Add<N, Output = M> + Sub<N, Output = M>> Iterator
+    for ModNumIterator<N, M>
+{
     type Item = M;
 
     fn next(&mut self) -> Option<Self::Item> {
-        update(&mut self.finished, &mut self.next, |m, u| *m + u, self.next_back)
+        update(
+            &mut self.finished,
+            &mut self.next,
+            |m, u| *m + u,
+            self.next_back,
+        )
     }
 }
 
-impl <N: NumType, M:MNum<Num=N> + Add<N,Output=M> + Sub<N,Output=M>> DoubleEndedIterator for ModNumIterator<N,M> {
+impl<N: NumType, M: MNum<Num = N> + Add<N, Output = M> + Sub<N, Output = M>> DoubleEndedIterator
+    for ModNumIterator<N, M>
+{
     fn next_back(&mut self) -> Option<Self::Item> {
-        update(&mut self.finished, &mut self.next_back, |m, u| *m - u, self.next)
+        update(
+            &mut self.finished,
+            &mut self.next_back,
+            |m, u| *m - u,
+            self.next,
+        )
     }
 }
 
 /// Represents an integer **a (mod M)**
-#[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd,Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ModNumC<N: FromPrimitive, const M: usize> {
-    num: N
+    num: N,
 }
 
-impl <N:NumType, const M: usize> MNum for ModNumC<N,M> {
+impl<N: NumType, const M: usize> MNum for ModNumC<N, M> {
     type Num = N;
 
     fn a(&self) -> Self::Num {
@@ -932,15 +974,15 @@ impl <N:NumType, const M: usize> MNum for ModNumC<N,M> {
     }
 }
 
-impl <N: NumType, const M: usize> ModNumC<N,M> {
+impl<N: NumType, const M: usize> ModNumC<N, M> {
     pub fn new(num: N) -> Self {
-        let mut result = ModNumC {num};
+        let mut result = ModNumC { num };
         result.num = result.num.mod_floor(&result.m());
         result
     }
 
     /// Returns an iterator starting at **a (mod m)** and ending at **a - 1 (mod m)**
-    pub fn iter(&self) -> ModNumIterator<N,Self> {
+    pub fn iter(&self) -> ModNumIterator<N, Self> {
         ModNumIterator::new(*self)
     }
 }
@@ -950,14 +992,14 @@ derive_modulo_arithmetic! {
 }
 
 /// Represents an integer **a (mod M)**
-#[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd,Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct WrapCountNum<N: NumType> {
     num: N,
     modulo: N,
-    wraps: N
+    wraps: N,
 }
 
-impl <N: NumType> MNum for WrapCountNum<N> {
+impl<N: NumType> MNum for WrapCountNum<N> {
     type Num = N;
 
     fn a(&self) -> Self::Num {
@@ -973,7 +1015,7 @@ impl <N: NumType> MNum for WrapCountNum<N> {
     }
 }
 
-impl <N: NumType> WrapCountNum<N> {
+impl<N: NumType> WrapCountNum<N> {
     /// Creates a new integer **a (mod m)**, storing the number of wraparounds
     /// of **a** as well.
     pub fn new(a: N, modulo: N) -> Self {
@@ -982,7 +1024,11 @@ impl <N: NumType> WrapCountNum<N> {
     }
 
     pub fn with_wraps(&self, a: N, wraps: N) -> Self {
-        WrapCountNum {num: a, modulo: self.modulo, wraps}
+        WrapCountNum {
+            num: a,
+            modulo: self.modulo,
+            wraps,
+        }
     }
 }
 
@@ -1100,12 +1146,13 @@ derive_wrap_modulo_arithmetic! {
     WrapCountNum<N> {}
 }
 
-#[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd,Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct WrapCountNumC<N: FromPrimitive, const M: usize> {
-    num: N, wraps: N
+    num: N,
+    wraps: N,
 }
 
-impl <N:NumType, const M: usize> MNum for WrapCountNumC<N,M> {
+impl<N: NumType, const M: usize> MNum for WrapCountNumC<N, M> {
     type Num = N;
 
     fn a(&self) -> Self::Num {
@@ -1121,11 +1168,14 @@ impl <N:NumType, const M: usize> MNum for WrapCountNumC<N,M> {
     }
 }
 
-impl <N: NumType, const M: usize> WrapCountNumC<N,M> {
+impl<N: NumType, const M: usize> WrapCountNumC<N, M> {
     /// Creates a new integer **a (mod m)**, storing the number of wraparounds
     /// of **a** as well.
     pub fn new(a: N) -> Self {
-        let mut result = WrapCountNumC {num: a, wraps: N::zero()};
+        let mut result = WrapCountNumC {
+            num: a,
+            wraps: N::zero(),
+        };
         let (wraps, num) = a.div_mod_floor(&result.m());
         result.num = num;
         result.wraps = wraps;
@@ -1133,7 +1183,7 @@ impl <N: NumType, const M: usize> WrapCountNumC<N,M> {
     }
 
     pub fn with_wraps(&self, a: N, wraps: N) -> Self {
-        WrapCountNumC {num: a, wraps}
+        WrapCountNumC { num: a, wraps }
     }
 }
 
@@ -1141,8 +1191,8 @@ derive_wrap_modulo_arithmetic! {
     WrapCountNumC<N,M> {const M: usize}
 }
 
-#[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd,Hash)]
-pub struct OffSetNum<N: FromPrimitive> {
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct OffsetNum<N: FromPrimitive> {
     num: N,
     modulo: N,
     offset: N,
@@ -1156,14 +1206,18 @@ fn offset_init<N: NumType>(num: N, modulo: N, offset: N) -> N {
     num - offset
 }
 
-/* 
-impl <N:FromPrimitive> OffsetNum<N> {
-    pub fn new(num: N, modulo: N, offset: N) {
-        let num = (num - offset)
+impl<N: NumType> OffsetNum<N> {
+    pub fn new(num: N, modulo: N, offset: N) -> Self {
+        let num = offset_init(num, modulo, offset);
+        OffsetNum {
+            num,
+            modulo,
+            offset,
+        }
     }
 }
 
-impl <N:NumType> MNum for OffSetNum<N> {
+impl<N: NumType> MNum for OffsetNum<N> {
     type Num = N;
 
     fn a(&self) -> N {
@@ -1175,16 +1229,24 @@ impl <N:NumType> MNum for OffSetNum<N> {
     }
 
     fn with(&self, new_a: Self::Num) -> Self {
-        Self::new(new_a, self.m())
+        Self::new(new_a, self.m(), self.offset)
     }
 }
-*/
-#[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd,Hash)]
-pub struct OffsetNumC<N: FromPrimitive, const M: usize, const O: isize> {
-    num: N
+
+derive_basic_modulo_arithmetic! {
+    OffsetNum<N> {}
 }
 
-impl <N:NumType, const M: usize, const O: isize> MNum for OffsetNumC<N,M,O> {
+derive_add_assign_sub! {
+    OffsetNum<N> {}
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct OffsetNumC<N: FromPrimitive, const M: usize, const O: isize> {
+    num: N,
+}
+
+impl<N: NumType, const M: usize, const O: isize> MNum for OffsetNumC<N, M, O> {
     type Num = N;
 
     fn a(&self) -> Self::Num {
@@ -1200,10 +1262,10 @@ impl <N:NumType, const M: usize, const O: isize> MNum for OffsetNumC<N,M,O> {
     }
 }
 
-impl <N:NumType, const M: usize, const O: isize> OffsetNumC<N,M,O> {
+impl<N: NumType, const M: usize, const O: isize> OffsetNumC<N, M, O> {
     pub fn new(num: N) -> Self {
         let num = offset_init(num, N::from_usize(M).unwrap(), N::from_isize(O).unwrap());
-        let mut result = OffsetNumC {num};
+        let mut result = OffsetNumC { num };
         result.num = result.num.mod_floor(&result.m());
         result
     }
@@ -1220,9 +1282,9 @@ derive_add_assign_sub! {
 #[cfg(test)]
 mod tests {
     extern crate alloc;
+    use super::*;
     use alloc::vec;
     use alloc::vec::Vec;
-    use super::*;
 
     #[test]
     fn test_neg() {
@@ -1248,13 +1310,13 @@ mod tests {
 
     #[test]
     fn test_neg_c() {
-        let m: ModNumC<i32,5> = ModNumC::new(-2);
+        let m: ModNumC<i32, 5> = ModNumC::new(-2);
         assert_eq!(m, ModNumC::new(3));
     }
 
     #[test]
     fn test_negation_c() {
-        let s: ModNumC<i32,5> = ModNumC::new(0);
+        let s: ModNumC<i32, 5> = ModNumC::new(0);
         for m in s.iter() {
             let n = -m;
             assert_eq!(m + n, 0);
@@ -1264,14 +1326,14 @@ mod tests {
     #[test]
     fn test_sub_c() {
         for (n, sub, target) in vec![(1, 2, 4), (2, 1, 1), (4, 1, 3), (4, 4, 0), (2, 5, 2)] {
-            let n: ModNumC<i32,5> = ModNumC::new(n);
+            let n: ModNumC<i32, 5> = ModNumC::new(n);
             assert_eq!(n - sub, target);
         }
     }
 
     #[test]
     fn test_congruence_c() {
-        let m: ModNumC<i32,5> = ModNumC::new(2);
+        let m: ModNumC<i32, 5> = ModNumC::new(2);
         for c in (-13..13).step_by(5) {
             assert_eq!(m, c);
             for i in -2..=2 {
@@ -1286,22 +1348,48 @@ mod tests {
 
     #[test]
     fn test_iter_up() {
-        assert_eq!(vec![2, 3, 4, 0, 1], ModNum::new(2, 5).iter().map(|m: ModNum<usize>| m.a()).collect::<Vec<usize>>())
+        assert_eq!(
+            vec![2, 3, 4, 0, 1],
+            ModNum::new(2, 5)
+                .iter()
+                .map(|m: ModNum<usize>| m.a())
+                .collect::<Vec<usize>>()
+        )
     }
 
     #[test]
     fn test_iter_down() {
-        assert_eq!(vec![1, 0, 4, 3, 2], ModNum::new(2, 5).iter().rev().map(|m: ModNum<usize>| m.a()).collect::<Vec<usize>>())
+        assert_eq!(
+            vec![1, 0, 4, 3, 2],
+            ModNum::new(2, 5)
+                .iter()
+                .rev()
+                .map(|m: ModNum<usize>| m.a())
+                .collect::<Vec<usize>>()
+        )
     }
 
     #[test]
     fn test_iter_up_w() {
-        assert_eq!(vec![2, 3, 4, 0, 1], WrapCountNumC::<isize,5>::new(2).iter().map(|m: WrapCountNumC<isize,5>| m.a()).collect::<Vec<isize>>())
+        assert_eq!(
+            vec![2, 3, 4, 0, 1],
+            WrapCountNumC::<isize, 5>::new(2)
+                .iter()
+                .map(|m: WrapCountNumC<isize, 5>| m.a())
+                .collect::<Vec<isize>>()
+        )
     }
 
     #[test]
     fn test_iter_down_w() {
-        assert_eq!(vec![1, 0, 4, 3, 2], WrapCountNumC::<isize,5>::new(2).iter().rev().map(|m: WrapCountNumC<isize,5>| m.a()).collect::<Vec<isize>>())
+        assert_eq!(
+            vec![1, 0, 4, 3, 2],
+            WrapCountNumC::<isize, 5>::new(2)
+                .iter()
+                .rev()
+                .map(|m: WrapCountNumC<isize, 5>| m.a())
+                .collect::<Vec<isize>>()
+        )
     }
 
     #[test]
@@ -1371,12 +1459,19 @@ mod tests {
             (vec![(0, 67), (-1, 7), (-2, 59), (-3, 61)], 754018),
             (vec![(0, 67), (-2, 7), (-3, 59), (-4, 61)], 779210),
             (vec![(0, 67), (-1, 7), (-3, 59), (-4, 61)], 1261476),
-            (vec![(0, 1789), (-1, 37), (-2, 47), (-3, 1889)], 1202161486)
+            (vec![(0, 1789), (-1, 37), (-2, 47), (-3, 1889)], 1202161486),
         ];
         for (system, goal) in systems {
-            let mut equations = system.iter().copied()
+            let mut equations = system
+                .iter()
+                .copied()
                 .map(|(a, m)| ModNum::<i128>::new(a, m));
-            assert_eq!(ModNum::chinese_remainder_system(&mut equations).unwrap().a(), goal);
+            assert_eq!(
+                ModNum::chinese_remainder_system(&mut equations)
+                    .unwrap()
+                    .a(),
+                goal
+            );
         }
     }
 
@@ -1420,10 +1515,25 @@ mod tests {
 
     #[test]
     fn test_big() {
-        let mut values = [(0, 23), (28, 41), (20, 37), (398, 421), (11, 17), (15, 19), (6, 29),
-            (433, 487), (11, 13), (5, 137), (19, 49)]
-            .iter().copied().map(|(a, m)| ModNum::new(a, m));
-        let solution = ModNum::<i128>::chinese_remainder_system(&mut values).unwrap().a();
+        let mut values = [
+            (0, 23),
+            (28, 41),
+            (20, 37),
+            (398, 421),
+            (11, 17),
+            (15, 19),
+            (6, 29),
+            (433, 487),
+            (11, 13),
+            (5, 137),
+            (19, 49),
+        ]
+        .iter()
+        .copied()
+        .map(|(a, m)| ModNum::new(a, m));
+        let solution = ModNum::<i128>::chinese_remainder_system(&mut values)
+            .unwrap()
+            .a();
         assert_eq!(solution, 762009420388013796);
     }
 
@@ -1463,7 +1573,7 @@ mod tests {
         let off = OffsetNumC::<usize, 5, 2>::new(1);
         assert_eq!(off.a(), 6);
         for test in [507, 512, 502, 497, 22] {
-            let bigoff = OffsetNumC::<usize, 5, 502>::new(test);    
+            let bigoff = OffsetNumC::<usize, 5, 502>::new(test);
             assert_eq!(bigoff.a(), 502);
         }
     }
