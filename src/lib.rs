@@ -456,6 +456,26 @@
 //!     assert!(set.contains(m));
 //! }
 //! ```
+//! 
+//! # Modular ranges rooted elsewhere than zero
+//! 
+//! Occasionally of use is the ability to represent a modular range of values starting elsewhere than zero. To address
+//! this situation, `OffsetNumC` is provided. It has three generic parameters:
+//! * Underlying integer type
+//! * Number of values in the range
+//! * Starting offset for the range
+//! 
+//! ```
+//! use bare_metal_modulo::*;
+//! 
+//! let mut off = OffsetNumC::<i16, 7, 5>::new(5);
+//! assert_eq!(off.a(), 5);
+//! for i in 0..7 {
+//!     off += 1;
+//!     assert_eq!(off.a(), 5 + i);
+//! }
+//! assert_eq!(off.a(), 5);
+//! ```
 //!
 //! # Solving Modular Equations with the Chinese Remainder Theorem
 //! For the [2020 Advent of Code](https://adventofcode.com/2020)
@@ -1104,6 +1124,44 @@ derive_wrap_modulo_arithmetic! {
 }
 
 #[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd,Hash)]
+pub struct OffSetNum<N: FromPrimitive> {
+    num: N,
+    modulo: N,
+    offset: N,
+}
+
+fn offset_init<N: NumType>(num: N, modulo: N, offset: N) -> N {
+    let mut num = num;
+    while num < offset {
+        num += modulo;
+    }
+    num - offset
+}
+
+/* 
+impl <N:FromPrimitive> OffsetNum<N> {
+    pub fn new(num: N, modulo: N, offset: N) {
+        let num = (num - offset)
+    }
+}
+
+impl <N:NumType> MNum for OffSetNum<N> {
+    type Num = N;
+
+    fn a(&self) -> N {
+        self.num + self.offset
+    }
+
+    fn m(&self) -> N {
+        self.modulo
+    }
+
+    fn with(&self, new_a: Self::Num) -> Self {
+        Self::new(new_a, self.m())
+    }
+}
+*/
+#[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd,Hash)]
 pub struct OffsetNumC<N: FromPrimitive, const M: usize, const O: isize> {
     num: N
 }
@@ -1126,7 +1184,8 @@ impl <N:NumType, const M: usize, const O: isize> MNum for OffsetNumC<N,M,O> {
 
 impl <N:NumType, const M: usize, const O: isize> OffsetNumC<N,M,O> {
     pub fn new(num: N) -> Self {
-        let mut result = OffsetNumC {num: num - N::from_isize(O).unwrap()};
+        let num = offset_init(num, N::from_usize(M).unwrap(), N::from_isize(O).unwrap());
+        let mut result = OffsetNumC {num};
         result.num = result.num.mod_floor(&result.m());
         result
     }
@@ -1375,5 +1434,15 @@ mod tests {
         assert_eq!(off.a(), 5);
         off += 1;
         assert_eq!(off.a(), 6);
+    }
+
+    #[test]
+    fn test_offset_2() {
+        let off = OffsetNumC::<usize, 5, 2>::new(1);
+        assert_eq!(off.a(), 6);
+        for test in [507, 512, 502, 497, 22] {
+            let bigoff = OffsetNumC::<usize, 5, 502>::new(test);    
+            assert_eq!(bigoff.a(), 502);
+        }
     }
 }

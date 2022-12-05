@@ -1,4 +1,5 @@
-# Overview
+# Bare Metal Modulo
+
 `ModNum` and `ModNumC` are highly ergonomic modular arithmetic structs intended 
 for `no_std` use.
 
@@ -27,6 +28,8 @@ Note that `ModNum`, `ModNumC`, `WrapCountNum`, and `WrapCountNumC` are not desig
 arbitrary-length integers, as they require their integer type to implement the `Copy` trait.
 
 # Updates
+* **1.2.0**:
+  * 
 * **1.1.2**:
   * `WrapCountNum` and `WrapCountNumC` now support `.pow()`.  
 * **1.1.1**:
