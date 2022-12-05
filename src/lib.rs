@@ -471,8 +471,8 @@
 //! let mut off = OffsetNumC::<i16, 7, 5>::new(5);
 //! assert_eq!(off.a(), 5);
 //! for i in 0..7 {
-//!     off += 1;
 //!     assert_eq!(off.a(), 5 + i);
+//!     off += 1;
 //! }
 //! assert_eq!(off.a(), 5);
 //! ```
@@ -644,9 +644,8 @@ macro_rules! derive_assign {
     }
 }
 
-macro_rules! derive_core_modulo_arithmetic {
+macro_rules! derive_basic_modulo_arithmetic {
     ($name:ty {$($generic:tt)*}) => {
-
         /// Returns **true** if **other** is congruent to **self.a() (mod self.m())**
         impl <N:NumType,$($generic)*> PartialEq<N> for $name {
             fn eq(&self, other: &N) -> bool {
@@ -674,6 +673,16 @@ macro_rules! derive_core_modulo_arithmetic {
             fn add(self, rhs: Self) -> Self::Output {
                 self + rhs.a()
             }
+        }        
+    }
+}
+
+macro_rules! derive_core_modulo_arithmetic {
+    ($name:ty {$($generic:tt)*}) => {
+
+        derive_basic_modulo_arithmetic! {
+            $name
+            {$($generic)*}
         }
 
         impl <N: NumType,$($generic)*> Mul<N> for $name {
@@ -754,20 +763,8 @@ macro_rules! derive_core_modulo_arithmetic {
     }
 }
 
-macro_rules! derive_modulo_arithmetic {
+macro_rules! derive_add_assign_sub {
     ($name:ty {$($generic:tt)*}) => {
-
-        derive_core_modulo_arithmetic! {
-            $name
-            {$($generic)*}
-        }
-
-        impl <N:NumType,$($generic)*> Display for $name {
-            fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-                write!(f, "{} (mod {})", self.a(), self.m())
-            }
-        }
-
         derive_assign! {
             $name, AddAssign<N>, N, add_assign {+} {$($generic)*} {} {}
         }
@@ -806,6 +803,27 @@ macro_rules! derive_modulo_arithmetic {
 
         derive_assign! {
             $name, SubAssign<$name>, $name, sub_assign {-} {$($generic)*} {} {}
+        }
+    }
+}
+
+macro_rules! derive_modulo_arithmetic {
+    ($name:ty {$($generic:tt)*}) => {
+
+        derive_core_modulo_arithmetic! {
+            $name
+            {$($generic)*}
+        }
+
+        impl <N:NumType,$($generic)*> Display for $name {
+            fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+                write!(f, "{} (mod {})", self.a(), self.m())
+            }
+        }
+
+        derive_add_assign_sub! {
+            $name
+            {$($generic)*}
         }
 
         derive_assign! {
@@ -1191,7 +1209,11 @@ impl <N:NumType, const M: usize, const O: isize> OffsetNumC<N,M,O> {
     }
 }
 
-derive_modulo_arithmetic! {
+derive_basic_modulo_arithmetic! {
+    OffsetNumC<N,M,O> {const M: usize, const O: isize}
+}
+
+derive_add_assign_sub! {
     OffsetNumC<N,M,O> {const M: usize, const O: isize}
 }
 
