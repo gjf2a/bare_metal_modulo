@@ -29,7 +29,7 @@ arbitrary-length integers, as they require their integer type to implement the `
 
 # Updates
 * **1.2.0**:
-  * 
+  * `OffsetNum` and `OffsetNumC` introduced.
 * **1.1.2**:
   * `WrapCountNum` and `WrapCountNumC` now support `.pow()`.  
 * **1.1.1**:
