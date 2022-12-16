@@ -1,6 +1,6 @@
 [package]
 name = "bare_metal_modulo"
-version = "1.2.0"
+version = "1.2.1"
 authors = ["gjf2a <ferrer@hendrix.edu>"]
 edition = "2021"
 description = "ModNum is a highly ergonomic modular arithmetic struct intended for no_std use"
@@ -13,7 +13,6 @@ categories = ["no-std", "mathematics"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-trait-set = "0.3"
 
 [dependencies.num]
 version = "0.4"

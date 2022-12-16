@@ -145,6 +145,9 @@
 //!
 //! m += 3;
 //! assert_eq!(m, ModNumC::new(0));
+//! 
+//! let m: ModNumC<isize,5> = ModNumC::default();
+//! assert_eq!(m, ModNumC::new(0));
 //! ```
 //!
 //! Saturating addition and subtraction are often useful relative to the modulus, so the
@@ -431,6 +434,11 @@
 //! value *= 5;
 //! assert_eq!(value, 4);
 //! assert_eq!(value.wraps(), 7);
+//! 
+//! let mut value = WrapCountNumC::<isize, 8>::default();
+//! value += 15;
+//! assert_eq!(value, 7);
+//! assert_eq!(value.wraps(), 1);
 //! ```
 //!
 //! # Hash/BTree keys
@@ -469,11 +477,18 @@
 //! use bare_metal_modulo::*;
 //!
 //! let mut off = OffsetNum::<usize>::from(1..=10);
+//! assert_eq!(off.a(), 1);
+//! assert_eq!(off.min_max(), (1, 10));
+//! 
 //! for i in 1..=10 {
 //!     assert_eq!(off.a(), i);    
 //!     off += 1;
 //! }
 //! assert_eq!(off.a(), 1);
+//! 
+//! for (i, n) in off.iter().enumerate() {
+//!     assert_eq!(n.a(), i + 1);
+//! }
 //! ```
 //!
 //! Negative offsets are fine:
@@ -497,11 +512,20 @@
 //!
 //! let mut off = OffsetNumC::<i16, 7, 5>::new(5);
 //! assert_eq!(off.a(), 5);
+//! assert_eq!(off.min_max(), (5, 11));
+//! 
 //! for i in 0..7 {
 //!     assert_eq!(off.a(), 5 + i);
 //!     off += 1;
 //! }
 //! assert_eq!(off.a(), 5);
+//! 
+//! let off_at_start = OffsetNumC::<i16, 7, 5>::default();
+//! assert_eq!(off_at_start, off);
+//! 
+//! for (i, n) in off.iter().enumerate() {
+//!     assert_eq!(i + 5, n.a() as usize);
+//! }
 //! ```
 //!
 //! # Solving Modular Equations with the Chinese Remainder Theorem
@@ -551,10 +575,8 @@ use core::ops::{
 use num::traits::{Pow, SaturatingAdd, SaturatingSub};
 use num::{FromPrimitive, Integer, NumCast, One, Signed, Zero};
 
-use trait_set::trait_set;
-trait_set! {
-    pub trait NumType = Copy + Clone + Integer + Display + Debug + NumCast + FromPrimitive + AddAssign + SubAssign + MulAssign + DivAssign;
-}
+pub trait NumType: Default + Copy + Clone + Integer + Display + Debug + NumCast + FromPrimitive + AddAssign + SubAssign + MulAssign + DivAssign {}
+impl <T: Default + Copy + Clone + Integer + Display + Debug + NumCast + FromPrimitive + AddAssign + SubAssign + MulAssign + DivAssign> NumType for T {}
 
 pub trait MNum: Copy + Eq + PartialEq {
     type Num: NumType;
@@ -982,7 +1004,7 @@ impl<N: NumType, M: MNum<Num = N> + Add<N, Output = M> + Sub<N, Output = M>> Dou
 }
 
 /// Represents an integer **a (mod M)**
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Default, Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ModNumC<N: FromPrimitive, const M: usize> {
     num: N,
 }
@@ -1175,7 +1197,7 @@ derive_wrap_modulo_arithmetic! {
     WrapCountNum<N> {}
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Default, Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct WrapCountNumC<N: FromPrimitive, const M: usize> {
     num: N,
     wraps: N,
@@ -1246,6 +1268,16 @@ impl<N: NumType> OffsetNum<N> {
         result.num = result.num.mod_floor(&result.m());
         result
     }
+
+    /// Returns an iterator starting at **a (mod m)** and ending at **a - 1 (mod m)**
+    pub fn iter(&self) -> ModNumIterator<N, Self> {
+        ModNumIterator::new(*self)
+    }
+
+    /// Returns the minimum and maximum possible values.
+    pub fn min_max(&self) -> (N, N) {
+        (self.offset, self.offset + self.modulo - N::one())
+    }
 }
 
 impl<N: NumType> From<RangeInclusive<N>> for OffsetNum<N> {
@@ -1278,7 +1310,7 @@ derive_add_assign_sub! {
     OffsetNum<N> {}
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Default, Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct OffsetNumC<N: FromPrimitive, const M: usize, const O: isize> {
     num: N,
 }
@@ -1305,6 +1337,16 @@ impl<N: NumType, const M: usize, const O: isize> OffsetNumC<N, M, O> {
         let mut result = OffsetNumC { num };
         result.num = result.num.mod_floor(&result.m());
         result
+    }
+
+    /// Returns an iterator starting at **a (mod m)** and ending at **a - 1 (mod m)**
+    pub fn iter(&self) -> ModNumIterator<N, Self> {
+        ModNumIterator::new(*self)
+    }
+
+    /// Returns the minimum and maximum possible values.
+    pub fn min_max(&self) -> (N, N) {
+        (N::from_isize(O).unwrap(), N::from_isize(O + isize::from_usize(M).unwrap() - 1).unwrap())
     }
 }
 

@@ -24,10 +24,16 @@ For example, if we start with **8 (mod 17)** and add **42**, the result is **16 
 a wraparound of **2**. `WrapCountNum` and `WrapCountNumC` objects store this wraparound value 
 and make it available. 
 
-Note that `ModNum`, `ModNumC`, `WrapCountNum`, and `WrapCountNumC` are not designed to work with 
+Furthermore, it is sometimes useful to be able to move back and forth in a range that is offset from zero. To that end, `OffsetNum` and `OffsetNumC` are provided.
+
+Note that `ModNum`, `ModNumC`, `WrapCountNum`, `WrapCountNumC`, `OffsetNum`, and `OffsetNumC` are not designed to work with 
 arbitrary-length integers, as they require their integer type to implement the `Copy` trait.
 
 # Updates
+* **1.2.1**
+  * Added iterator support for `OffsetNum` and `OffsetNumC`.
+  * Removed dependency on `trait_set` crate.
+  * `ModNumC`, `WrapCountNumC`, and `OffsetNumC` implement `Default`.
 * **1.2.0**:
   * `OffsetNum` and `OffsetNumC` introduced.
 * **1.1.2**:
