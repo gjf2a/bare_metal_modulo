@@ -478,6 +478,7 @@
 //!
 //! let mut off = OffsetNum::<usize>::from(1..=10);
 //! assert_eq!(off.a(), 1);
+//! assert_eq!(off, 1); // Congruence equality with basic integer type
 //! assert_eq!(off.min_max(), (1, 10));
 //! 
 //! for i in 1..=10 {
@@ -715,7 +716,7 @@ macro_rules! derive_basic_modulo_arithmetic {
         /// Returns **true** if **other** is congruent to **self.a() (mod self.m())**
         impl <N:NumType,$($generic)*> PartialEq<N> for $name {
             fn eq(&self, other: &N) -> bool {
-                self.num == other.mod_floor(&self.m())
+                self.a() == self.with(*other).a()
             }
         }
 

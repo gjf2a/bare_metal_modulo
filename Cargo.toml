@@ -1,6 +1,6 @@
 [package]
 name = "bare_metal_modulo"
-version = "1.2.1"
+version = "1.2.2"
 authors = ["gjf2a <ferrer@hendrix.edu>"]
 edition = "2021"
 description = "ModNum is a highly ergonomic modular arithmetic struct intended for no_std use"
