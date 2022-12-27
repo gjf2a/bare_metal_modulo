@@ -471,14 +471,15 @@
 //! this situation, `OffsetNum` and `OffsetNumC` are provided. Both support addition, subtraction, and iteration in a
 //! manner similar to the other types.
 //!
-//! `OffsetNum` can be created directly or from a `RangeInclusive`:
+//! `OffsetNum` objects can be created directly or from a `RangeInclusive`:
 //!
 //! ```
 //! use bare_metal_modulo::*;
 //!
 //! let mut off = OffsetNum::<usize>::from(1..=10);
 //! assert_eq!(off.a(), 1);
-//! assert_eq!(off, 1); // Congruence equality with basic integer type
+//! assert_eq!(off, 1); 
+//! assert_eq!(off, 11); // Congruence equality with basic integer type
 //! assert_eq!(off.min_max(), (1, 10));
 //! 
 //! for i in 1..=10 {
