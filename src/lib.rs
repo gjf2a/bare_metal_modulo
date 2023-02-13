@@ -145,7 +145,7 @@
 //!
 //! m += 3;
 //! assert_eq!(m, ModNumC::new(0));
-//! 
+//!
 //! let m: ModNumC<isize,5> = ModNumC::default();
 //! assert_eq!(m, ModNumC::new(0));
 //! ```
@@ -434,7 +434,7 @@
 //! value *= 5;
 //! assert_eq!(value, 4);
 //! assert_eq!(value.wraps(), 7);
-//! 
+//!
 //! let mut value = WrapCountNumC::<isize, 8>::default();
 //! value += 15;
 //! assert_eq!(value, 7);
@@ -478,19 +478,27 @@
 //!
 //! let mut off = OffsetNum::<usize>::from(1..=10);
 //! assert_eq!(off.a(), 1);
-//! assert_eq!(off, 1); 
+//! assert_eq!(off, 1);
 //! assert_eq!(off, 11); // Congruence equality with basic integer type
 //! assert_eq!(off.min_max(), (1, 10));
-//! 
+//!
 //! for i in 1..=10 {
 //!     assert_eq!(off.a(), i);    
 //!     off += 1;
 //! }
 //! assert_eq!(off.a(), 1);
-//! 
+//!
 //! for (i, n) in off.iter().enumerate() {
 //!     assert_eq!(n.a(), i + 1);
 //! }
+//!
+//! off -= 1;
+//! for i in (1..=10).rev() {
+//!     assert_eq!(off.a(), i);
+//!     off -= 1;
+//! }
+//! assert_eq!(off.a(), 10);
+//!
 //! ```
 //!
 //! Negative offsets are fine:
@@ -515,16 +523,16 @@
 //! let mut off = OffsetNumC::<i16, 7, 5>::new(5);
 //! assert_eq!(off.a(), 5);
 //! assert_eq!(off.min_max(), (5, 11));
-//! 
+//!
 //! for i in 0..7 {
 //!     assert_eq!(off.a(), 5 + i);
 //!     off += 1;
 //! }
 //! assert_eq!(off.a(), 5);
-//! 
+//!
 //! let off_at_start = OffsetNumC::<i16, 7, 5>::default();
 //! assert_eq!(off_at_start, off);
-//! 
+//!
 //! for (i, n) in off.iter().enumerate() {
 //!     assert_eq!(i + 5, n.a() as usize);
 //! }
@@ -577,8 +585,37 @@ use core::ops::{
 use num::traits::{Pow, SaturatingAdd, SaturatingSub};
 use num::{FromPrimitive, Integer, NumCast, One, Signed, Zero};
 
-pub trait NumType: Default + Copy + Clone + Integer + Display + Debug + NumCast + FromPrimitive + AddAssign + SubAssign + MulAssign + DivAssign {}
-impl <T: Default + Copy + Clone + Integer + Display + Debug + NumCast + FromPrimitive + AddAssign + SubAssign + MulAssign + DivAssign> NumType for T {}
+pub trait NumType:
+    Default
+    + Copy
+    + Clone
+    + Integer
+    + Display
+    + Debug
+    + NumCast
+    + FromPrimitive
+    + AddAssign
+    + SubAssign
+    + MulAssign
+    + DivAssign
+{
+}
+impl<
+        T: Default
+            + Copy
+            + Clone
+            + Integer
+            + Display
+            + Debug
+            + NumCast
+            + FromPrimitive
+            + AddAssign
+            + SubAssign
+            + MulAssign
+            + DivAssign,
+    > NumType for T
+{
+}
 
 pub trait MNum: Copy + Eq + PartialEq {
     type Num: NumType;
@@ -853,7 +890,9 @@ macro_rules! derive_add_assign_sub {
             type Output = Self;
 
             fn sub(self, rhs: N) -> Self::Output {
-                self + (-self.with(rhs)).a()
+                let offset = rhs.mod_floor(&self.m());
+                let negated_offset = self.m() - offset;
+                self + negated_offset
             }
         }
 
@@ -1348,7 +1387,10 @@ impl<N: NumType, const M: usize, const O: isize> OffsetNumC<N, M, O> {
 
     /// Returns the minimum and maximum possible values.
     pub fn min_max(&self) -> (N, N) {
-        (N::from_isize(O).unwrap(), N::from_isize(O + isize::from_usize(M).unwrap() - 1).unwrap())
+        (
+            N::from_isize(O).unwrap(),
+            N::from_isize(O + isize::from_usize(M).unwrap() - 1).unwrap(),
+        )
     }
 }
 
@@ -1679,5 +1721,43 @@ mod tests {
             println!("{off:?}");
         }
         assert_eq!(off.a(), 1);
+    }
+
+    #[test]
+    fn test_offset_5() {
+        let mut off = OffsetNum::<usize>::from(1..=10);
+        assert_eq!(off.a(), 1);
+        assert_eq!(off, 1);
+        assert_eq!(off, 11); // Congruence equality with basic integer type
+        assert_eq!(off.min_max(), (1, 10));
+
+        for i in 1..=10 {
+            assert_eq!(off.a(), i);
+            off += 1;
+        }
+        assert_eq!(off.a(), 1);
+
+        for (i, n) in off.iter().enumerate() {
+            assert_eq!(n.a(), i + 1);
+        }
+
+        off -= 1;
+        for i in (1..=10).rev() {
+            assert_eq!(off.a(), i);
+            off -= 1;
+        }
+        assert_eq!(off.a(), 10);
+    }
+
+    #[test]
+    fn test_offset_6() {
+        // From https://github.com/gjf2a/bare_metal_modulo/issues/10
+        let x = OffsetNum::new(5, 9, 1);
+        let one = OffsetNum::new(1, 9, 1);
+
+        let y = x + one;
+        let z = x - one;
+        assert_eq!(x.a() + 1, y.a());
+        assert_eq!(x.a() - 1, z.a());
     }
 }

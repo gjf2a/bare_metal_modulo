@@ -30,6 +30,8 @@ Note that `ModNum`, `ModNumC`, `WrapCountNum`, `WrapCountNumC`, `OffsetNum`, and
 arbitrary-length integers, as they require their integer type to implement the `Copy` trait.
 
 # Updates
+* **1.2.3**
+  * Fixes bug in subtraction for `OffsetNum` and `OffsetNumC`.
 * **1.2.2**
   * Fixes bug in equality comparison for `OffsetNum` and `OffsetNumC`.
 * **1.2.1**
