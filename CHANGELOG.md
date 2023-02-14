@@ -1,3 +1,7 @@
+# **1.2.4 - 2023-02-14**
+  * No changes in functionality..
+  * Updated documentation in `lib.rs` with regard to `OffsetNum` and `OffsetNumC`.
+  * Added some more keywords.
 # **1.2.3 - 2023-02-14** 
   * Fixes bug in subtraction for `OffsetNum` and `OffsetNumC`.
 # **1.2.2**

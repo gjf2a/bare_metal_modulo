@@ -9,7 +9,9 @@
 //!   which it is invoked, making a complete traversal of the elements in that object's ring.
 //! - `WrapCountNum` is similar to `ModNum`, but additionally tracks the amount of "wraparound"
 //!   that produced the modulo value. `WrapCountNumC` corresponds to `ModNumC`.
-//!
+//! - `OffsetNum` is similar to `ModNum`, but instead of a zero-based range,
+//!   it can start at any integer value. `OffsetNumC` corresponds to `ModNumC`.
+//! 
 //! `ModNum` objects represent a value modulo **m**. The value and modulo can be of any
 //! primitive integer type.  Arithmetic operators include `+`, `-` (both unary and binary),
 //! `*`, `/`, `pow()`, `==`, `<`, `>`, `<=`, `>=`, and `!=`. Additional capabilities include
@@ -32,12 +34,12 @@
 //! This library was originally developed to facilitate bidirectional navigation through fixed-size
 //! arrays at arbitrary starting points. This is facilitated by a double-ended iterator that
 //! traverses the entire ring starting at any desired value. The iterator supports
-//! `ModNum` and `ModNumC`. It also supports `WrapCountNum` and `WrapCountNumC` for signed values
-//! only.
+//! `ModNum`, `ModNumC`, `OffsetNum`, and `OffsetNumC`. It also supports `WrapCountNum` and 
+//! `WrapCountNumC` for signed values only.
 //!
-//! Note that `ModNum`, `ModNumC`, `WrapCountNum`, and `WrapCountNumC` are not designed to work
-//! with arbitrary-length integers, as they require their integer type to implement the `Copy`
-//! trait.
+//! Note that `ModNum`, `ModNumC`, `WrapCountNum`, `WrapCountNumC`, `OffsetNum`, and `OffsetNumC` 
+//! are not designed to work with arbitrary-length integers, as they require their integer type 
+//! to implement the `Copy` trait.
 //!
 //! For the [2020 Advent of Code](https://adventofcode.com/2020)
 //! ([Day 13](https://adventofcode.com/2020/day/13) part 2),
