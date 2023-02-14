@@ -512,6 +512,26 @@
 //! assert_eq!(off.a(), -6);
 //! ```
 //!
+//! Subtraction is subtle for `OffsetNum`. The subtrahend is normalized
+//! to the size of the `OffsetNum`'s range, but zero-based. It is then 
+//! subtracted from the modulus and added to the minuend.
+//! 
+//! ```
+//! use bare_metal_modulo::*;
+//! 
+//! let mut off = OffsetNum::<usize>::from(3..=6);
+//! assert_eq!((off - 1).a(), 6);
+//! assert_eq!((off - 2).a(), 5);
+//! assert_eq!((off - 3).a(), 4);
+//! assert_eq!((off - 4).a(), 3);
+//! 
+//! off += 3;
+//! assert_eq!((off - 1).a(), 5);
+//! assert_eq!((off - 2).a(), 4);
+//! assert_eq!((off - 3).a(), 3);
+//! assert_eq!((off - 4).a(), 6);
+//! ```
+//! 
 //! `OffsetNumC` has three generic parameters:
 //! * Underlying integer type
 //! * Number of values in the range
