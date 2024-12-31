@@ -11,7 +11,7 @@
 //!   that produced the modulo value. `WrapCountNumC` corresponds to `ModNumC`.
 //! - `OffsetNum` is similar to `ModNum`, but instead of a zero-based range,
 //!   it can start at any integer value. `OffsetNumC` corresponds to `ModNumC`.
-//! 
+//!
 //! `ModNum` objects represent a value modulo **m**. The value and modulo can be of any
 //! primitive integer type.  Arithmetic operators include `+`, `-` (both unary and binary),
 //! `*`, `/`, `pow()`, `==`, `<`, `>`, `<=`, `>=`, and `!=`. Additional capabilities include
@@ -34,11 +34,11 @@
 //! This library was originally developed to facilitate bidirectional navigation through fixed-size
 //! arrays at arbitrary starting points. This is facilitated by a double-ended iterator that
 //! traverses the entire ring starting at any desired value. The iterator supports
-//! `ModNum`, `ModNumC`, `OffsetNum`, and `OffsetNumC`. It also supports `WrapCountNum` and 
+//! `ModNum`, `ModNumC`, `OffsetNum`, and `OffsetNumC`. It also supports `WrapCountNum` and
 //! `WrapCountNumC` for signed values only.
 //!
-//! Note that `ModNum`, `ModNumC`, `WrapCountNum`, `WrapCountNumC`, `OffsetNum`, and `OffsetNumC` 
-//! are not designed to work with arbitrary-length integers, as they require their integer type 
+//! Note that `ModNum`, `ModNumC`, `WrapCountNum`, `WrapCountNumC`, `OffsetNum`, and `OffsetNumC`
+//! are not designed to work with arbitrary-length integers, as they require their integer type
 //! to implement the `Copy` trait.
 //!
 //! For the [2020 Advent of Code](https://adventofcode.com/2020)
@@ -473,7 +473,7 @@
 //! this situation, `OffsetNum` and `OffsetNumC` are provided. Both support addition, subtraction, and iteration in a
 //! manner similar to the other types.
 //!
-//! `OffsetNum` objects can be created directly or from a `RangeInclusive`:
+//! `OffsetNum` objects can be created directly or from a `Range` or `RangeInclusive`:
 //!
 //! ```
 //! use bare_metal_modulo::*;
@@ -501,6 +501,10 @@
 //! }
 //! assert_eq!(off.a(), 10);
 //!
+//! let off_inclusive = OffsetNum::<usize>::from(1..=5);
+//! let off_exclusive = OffsetNum::<usize>::from(1..6);
+//! assert_eq!(off_inclusive, off_exclusive);
+//!
 //! ```
 //!
 //! Negative offsets are fine:
@@ -515,25 +519,25 @@
 //! ```
 //!
 //! Subtraction is subtle for `OffsetNum`. The subtrahend is normalized
-//! to the size of the `OffsetNum`'s range, but zero-based. It is then 
+//! to the size of the `OffsetNum`'s range, but zero-based. It is then
 //! subtracted from the modulus and added to the minuend.
-//! 
+//!
 //! ```
 //! use bare_metal_modulo::*;
-//! 
+//!
 //! let mut off = OffsetNum::<usize>::from(3..=6);
 //! assert_eq!((off - 1).a(), 6);
 //! assert_eq!((off - 2).a(), 5);
 //! assert_eq!((off - 3).a(), 4);
 //! assert_eq!((off - 4).a(), 3);
-//! 
+//!
 //! off += 3;
 //! assert_eq!((off - 1).a(), 5);
 //! assert_eq!((off - 2).a(), 4);
 //! assert_eq!((off - 3).a(), 3);
 //! assert_eq!((off - 4).a(), 6);
 //! ```
-//! 
+//!
 //! `OffsetNumC` has three generic parameters:
 //! * Underlying integer type
 //! * Number of values in the range
@@ -602,7 +606,7 @@ use core::cmp::Ordering;
 use core::fmt::{Debug, Display, Formatter};
 use core::mem;
 use core::ops::{
-    Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, RangeInclusive, Sub, SubAssign,
+    Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Range, RangeInclusive, Sub, SubAssign,
 };
 use num::traits::{Pow, SaturatingAdd, SaturatingSub};
 use num::{FromPrimitive, Integer, NumCast, One, Signed, Zero};
@@ -1105,7 +1109,7 @@ derive_modulo_arithmetic! {
     ModNumC<N,M> {const M: usize}
 }
 
-/// Represents an integer **a (mod M)**
+/// Represents an integer **a (mod m)**, storing the number of wraparounds of **a** as well.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct WrapCountNum<N: NumType> {
     num: N,
@@ -1260,6 +1264,7 @@ derive_wrap_modulo_arithmetic! {
     WrapCountNum<N> {}
 }
 
+/// Represents an integer **a (mod M)**, storing the number of wraparounds of **a** as well.
 #[derive(Default, Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct WrapCountNumC<N: FromPrimitive, const M: usize> {
     num: N,
@@ -1305,6 +1310,7 @@ derive_wrap_modulo_arithmetic! {
     WrapCountNumC<N,M> {const M: usize}
 }
 
+/// Represents an integer bounded between two values.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct OffsetNum<N: FromPrimitive> {
     num: N,
@@ -1349,6 +1355,12 @@ impl<N: NumType> From<RangeInclusive<N>> for OffsetNum<N> {
     }
 }
 
+impl<N: NumType> From<Range<N>> for OffsetNum<N> {
+    fn from(r: Range<N>) -> Self {
+        Self::new(r.start, r.end - r.start, r.start)
+    }
+}
+
 impl<N: NumType> MNum for OffsetNum<N> {
     type Num = N;
 
@@ -1373,6 +1385,7 @@ derive_add_assign_sub! {
     OffsetNum<N> {}
 }
 
+/// Represents an integer bounded between two values.
 #[derive(Default, Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct OffsetNumC<N: FromPrimitive, const M: usize, const O: isize> {
     num: N,

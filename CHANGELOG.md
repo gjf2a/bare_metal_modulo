@@ -1,3 +1,6 @@
+# **1.2.5 - 2024-12-30**
+  * `OffsetNum` objects can now be built from `Range` objects in addition to `RangeInclusive` objects.
+  * Cleaned up documentation comments on `WrapCountNum`, `WrapCountNumC`, `OffsetNum`, and `OffsetNumC`. 
 # **1.2.4 - 2023-02-14**
   * No changes in functionality..
   * Updated documentation in `lib.rs` with regard to `OffsetNum` and `OffsetNumC`.
