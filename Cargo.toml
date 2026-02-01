@@ -2,7 +2,7 @@
 name = "bare_metal_modulo"
 version = "1.2.5"
 authors = ["gjf2a <ferrer@hendrix.edu>"]
-edition = "2021"
+edition = "2024"
 description = "ModNum is a highly ergonomic modular arithmetic struct intended for no_std use"
 readme = "README.md"
 homepage = "https://github.com/gjf2a/bare_metal_modulo"
@@ -15,5 +15,5 @@ categories = ["no-std", "mathematics"]
 [dependencies]
 
 [dependencies.num]
-version = "0.4"
+version = "0.4.3"
 default-features = false

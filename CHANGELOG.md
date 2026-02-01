@@ -1,3 +1,5 @@
+# **1.2.6 - 2026-2-1**
+* Updated to Rust 2024 edition.
 # **1.2.5 - 2024-12-30**
   * `OffsetNum` objects can now be built from `Range` objects in addition to `RangeInclusive` objects.
   * Cleaned up documentation comments on `WrapCountNum`, `WrapCountNumC`, `OffsetNum`, and `OffsetNumC`. 
